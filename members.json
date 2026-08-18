@@ -1,0 +1,22 @@
+{
+  "generations": {
+    "Gen0": ["Sora", "Robocco", "Azki", "Miko", "Suisei"],
+    "Gen1": ["Aki", "Haato", "Fubuki", "Matsuri"],
+    "Gen2": ["Ayame", "Choco", "Subaru", "Shion"],
+    "Gamers": ["Fubuki", "Mio", "Okayu", "Korone"],
+    "Gen3": ["Pekora", "Flare", "Noel", "Marine"],
+    "Gen4": ["Kanata", "Watame", "Towa", "Luna"],
+    "Gen5": ["Lamy", "Nene", "Botan", "Polka"],
+    "HoloX": ["Laplus", "Lui", "Koyori", "Iroha", "Chloe"],
+    "ID Gen1": ["Risu", "Moona", "Iofi"],
+    "ID Gen2": ["Ollie", "Anya", "Reine"],
+    "ID Gen3": ["Zeta", "Kaela", "Kobo"],
+    "Myth": ["Gura", "Calli", "Ina", "Kiara", "Amelia"],
+    "Promise": ["Fauna", "Irys", "Baelz", "Mumei", "Kronii"],
+    "Advent": ["Shiori", "Biboo", "Nerissa", "Fuwawa", "Mococo"],
+    "ReGloss": ["Kanade", "Ririka", "Raden", "Hajime", "Ao"]
+  },
+  "exclusive_pairs": [
+    ["Gen1", "Gamers"]
+  ]
+}

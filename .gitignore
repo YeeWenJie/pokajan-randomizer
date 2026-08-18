@@ -1,0 +1,16 @@
+bin/
+obj/
+dist/
+dist-ui-preview/
+.vs/
+*.user
+*.suo
+*.userosscache
+publish/
+*.nupkg
+.DS_Store
+.env
+.env.*
+*.pfx
+*.pem
+*.key

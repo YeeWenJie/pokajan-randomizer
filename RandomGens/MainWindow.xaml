@@ -1,0 +1,150 @@
+<Window x:Class="PokajanRandomizer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pokajan Randomizer"
+        Width="1280"
+        Height="760"
+        MinWidth="1000"
+        MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="#1F7A34">
+    <Grid>
+        <Grid.Background>
+            <RadialGradientBrush Center="0.25,0.25" GradientOrigin="0.25,0.25" RadiusX="1.0" RadiusY="1.0">
+                <GradientStop Color="#2AA246" Offset="0.0" />
+                <GradientStop Color="#1F7A34" Offset="0.55" />
+                <GradientStop Color="#145726" Offset="1.0" />
+            </RadialGradientBrush>
+        </Grid.Background>
+
+        <Ellipse Width="420"
+                 Height="420"
+                 Fill="#22000000"
+                 HorizontalAlignment="Right"
+                 VerticalAlignment="Top"
+                 Margin="0,-120,-120,0" />
+
+        <Grid Margin="28">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Button x:Name="InfoButton"
+                        Width="74"
+                        Height="38"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Background="#CCFFFFFF"
+                        Foreground="#0D4A21"
+                        FontWeight="Bold"
+                        BorderBrush="#00FFFFFF"
+                        Click="InfoButton_OnClick"
+                        Content="Info" />
+
+                <Border x:Name="InfoHintPopup"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top"
+                        Margin="88,0,0,0"
+                        Padding="12,8"
+                        CornerRadius="12"
+                        Background="#DDFFFFFF"
+                        BorderBrush="#66000000"
+                        BorderThickness="1">
+                    <TextBlock Text="In case you dont know how to shuffle"
+                               Foreground="#0D4A21"
+                               FontWeight="SemiBold" />
+                </Border>
+            </Grid>
+
+            <StackPanel Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <StackPanel x:Name="RowsHost"
+                            VerticalAlignment="Center"
+                            Margin="0,0,28,0" />
+
+                <Border Width="250"
+                        Height="352"
+                        Padding="12"
+                        CornerRadius="24"
+                        VerticalAlignment="Center"
+                        Background="#3DF3FFD6"
+                        BorderBrush="#33FFFFFF"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Border x:Name="BonusCardHost"
+                                Width="188"
+                                Height="252"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Background="Transparent" />
+
+                        <TextBlock Grid.Row="1"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,14,0,0"
+                                   Foreground="White"
+                                   FontSize="34"
+                                   FontWeight="Black"
+                                   Text="BONUS" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <Button Grid.Row="2"
+                    x:Name="NewGameButton"
+                    Width="220"
+                    Height="58"
+                    Margin="0,28,0,0"
+                    HorizontalAlignment="Center"
+                    Background="#E8FFF0"
+                    Foreground="#145726"
+                    FontSize="22"
+                    FontWeight="Bold"
+                    BorderBrush="#00FFFFFF"
+                    Click="NewGameButton_OnClick"
+                    Content="New Game" />
+        </Grid>
+
+        <Grid x:Name="InfoOverlay"
+              Visibility="Collapsed"
+              Background="#99000000"
+              MouseLeftButtonDown="InfoOverlay_OnMouseLeftButtonDown">
+            <Border HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    MaxWidth="720"
+                    Margin="40"
+                    Padding="40,36"
+                    CornerRadius="20"
+                    Background="#E6123A24"
+                    MouseLeftButtonDown="InfoPanel_OnMouseLeftButtonDown">
+                <StackPanel>
+                    <TextBlock Foreground="White"
+                               FontSize="36"
+                               FontWeight="Black"
+                               Text="How to shuffle" />
+                    <TextBlock x:Name="InfoBodyText"
+                               Margin="0,24,0,0"
+                               Foreground="White"
+                               FontSize="22"
+                               LineHeight="36"
+                               TextWrapping="Wrap" />
+                    <TextBlock Margin="0,28,0,0"
+                               HorizontalAlignment="Center"
+                               Foreground="#CCFFFFFF"
+                               FontSize="16"
+                               Text="Click anywhere to close" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
