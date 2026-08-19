@@ -1,31 +1,6 @@
 namespace PokajanRandomizer;
 
-internal enum CardColor
-{
-    Orange,
-    Blue,
-    Pink
-}
-
-internal enum ComboKind
-{
-    Triple,
-    Gen3,
-    Gen4,
-    Gen5
-}
-
-internal sealed record ClaimedCard(MemberCard Member, CardColor Color);
-
-internal sealed record PayoutResult(
-    ComboKind Kind,
-    bool SameColor,
-    int BonusCardCount,
-    int TableRate,
-    int BonusExtra,
-    int Total);
-
-internal static class PayoutCalculator
+public static class PayoutCalculator
 {
     private const int BonusPerCard = 90;
 
@@ -67,6 +42,10 @@ internal static class PayoutCalculator
         var bonusExtra = bonusCount * BonusPerCard;
         return new PayoutResult(kind.Value, sameColor, bonusCount, tableRate, bonusExtra, tableRate + bonusExtra);
     }
+
+    public static bool IsSameMember(MemberCard left, MemberCard right) =>
+        string.Equals(left.Member, right.Member, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(left.Generation, right.Generation, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsTriple(IReadOnlyList<ClaimedCard> cards)
     {
@@ -116,28 +95,4 @@ internal static class PayoutCalculator
         (ComboKind.Gen5, true) => 1800,
         _ => 0
     };
-
-    private static bool IsSameMember(MemberCard left, MemberCard right) =>
-        string.Equals(left.Member, right.Member, StringComparison.OrdinalIgnoreCase)
-        && string.Equals(left.Generation, right.Generation, StringComparison.OrdinalIgnoreCase);
 }
-
-internal sealed class SeatState
-{
-    public SeatState(int id, string defaultName)
-    {
-        Id = id;
-        DefaultName = defaultName;
-        Name = defaultName;
-        Coins = 1000;
-    }
-
-    public int Id { get; }
-    public string DefaultName { get; }
-    public string Name { get; set; }
-    public int Coins { get; set; }
-
-    public string DisplayName => string.IsNullOrWhiteSpace(Name) ? DefaultName : Name.Trim();
-}
-
-internal sealed record CoinDelta(SeatState Seat, int OldCoins, int Change, int NewCoins);

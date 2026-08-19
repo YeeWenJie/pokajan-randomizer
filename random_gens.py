@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 PICK_COUNT = 4
+MAX_GENS_PER_SIZE = 2
 SEPARATOR = "=" * 31
 ESC = b"\x1b"
 CTRL_C = b"\x03"
@@ -31,17 +32,23 @@ def load_data() -> dict:
 
 
 def pick_generations(
-    generation_names: list[str],
+    generations: dict[str, list[str]],
     exclusive_pairs: list[list[str]],
     count: int = PICK_COUNT,
 ) -> list[str]:
-    remaining = list(generation_names)
+    remaining = list(generations)
     picked: list[str] = []
+    size_counts: dict[int, int] = {}
 
     while remaining and len(picked) < count:
         choice = random.choice(remaining)
         remaining.remove(choice)
         picked.append(choice)
+
+        size = len(generations[choice])
+        size_counts[size] = size_counts.get(size, 0) + 1
+        if size != 4 and size_counts[size] >= MAX_GENS_PER_SIZE:
+            remaining = [name for name in remaining if len(generations[name]) != size]
 
         blocked = set()
         for left, right in exclusive_pairs:
@@ -54,7 +61,7 @@ def pick_generations(
 
     if len(picked) < count:
         raise RuntimeError(
-            f"Could only pick {len(picked)} generations after exclusive-pair filters."
+            f"Could only pick {len(picked)} generations after exclusive-pair and size filters."
         )
 
     return picked
@@ -76,7 +83,11 @@ def wait_for_key(action_prompt: str, exit_prompt: str) -> bool:
 
 
 def print_round(generations: dict[str, list[str]], exclusive_pairs: list[list[str]]) -> None:
-    picked_gens = pick_generations(list(generations), exclusive_pairs)
+    order = list(generations)
+    picked_gens = sorted(
+        pick_generations(generations, exclusive_pairs),
+        key=lambda name: order.index(name) if name in order else len(order),
+    )
     bonus_pool = [member for gen in picked_gens for member in generations[gen]]
     bonus_member = random.choice(bonus_pool)
 

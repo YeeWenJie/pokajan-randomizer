@@ -36,6 +36,22 @@
 				"${workspaceFolder}/RandomGens/RandomGens.csproj"
 			],
 			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "publish-apk",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"publish",
+				"${workspaceFolder}/PokajanRandomizer.Maui/PokajanRandomizer.Maui.csproj",
+				"-c",
+				"Release",
+				"-f",
+				"net10.0-android",
+				"/property:GenerateFullPaths=true",
+				"/consoleloggerparameters:NoSummary;ForceNoAlign"
+			],
+			"problemMatcher": "$msCompile"
 		}
 	]
 }

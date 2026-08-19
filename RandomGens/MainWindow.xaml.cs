@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private readonly Button[] pokajanButtons = new Button[4];
     private readonly TextBlock[] coinLabels = new TextBlock[4];
     private readonly SlotDraft[] claimSlots = Enumerable.Range(0, ClaimSlotCount).Select(_ => new SlotDraft()).ToArray();
+    private int? cardsToRemove;
 
     private RoundResult? currentRound;
     private SeatState? claimWinner;
@@ -90,11 +91,7 @@ public partial class MainWindow : Window
     private void NewGameButton_OnClick(object sender, RoutedEventArgs e)
     {
         DismissHint();
-        foreach (var seat in seats)
-        {
-            seat.Coins = 1000;
-        }
-
+        CoinSettlement.ResetCoins(seats);
         RefreshCoinLabels();
         RenderRound(RoundPicker.CreateRound(memberData));
         SetPokajanEnabled(true);
@@ -153,15 +150,7 @@ public partial class MainWindow : Window
 
     private void ShowInfoOverlay()
     {
-        var cardsToRemoveText = NewGameButton.Tag is int cardsToRemove
-            ? cardsToRemove.ToString()
-            : "extra cards until the deck is 100 (the exact number appears here after New Game)";
-
-        InfoBodyText.Text =
-            "1. Take out the 4 gen cards that you got (each character has 9 cards: 3 pink, 3 blue, 3 orange). Check who the bonus card is, shuffle that character's 9 cards first, and take one out — that card is the bonus card.\n" +
-            "2. Shuffle the remaining cards.\n" +
-            $"3. Then take out {cardsToRemoveText} cards so that it can be a 100 card deck.\n" +
-            "4. Then deal 7 cards to each person.";
+        InfoBodyText.Text = ShuffleInfo.BuildBody(cardsToRemove);
 
         InfoOverlay.Visibility = Visibility.Visible;
     }
@@ -477,9 +466,7 @@ public partial class MainWindow : Window
         }
 
         var slot = claimSlots[pickerSlotIndex];
-        var sameMember = slot.Member is not null
-            && string.Equals(slot.Member.Member, member.Member, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(slot.Member.Generation, member.Generation, StringComparison.OrdinalIgnoreCase);
+        var sameMember = slot.Member is not null && PayoutCalculator.IsSameMember(slot.Member, member);
         slot.Member = member;
         if (!sameMember)
         {
@@ -514,16 +501,22 @@ public partial class MainWindow : Window
             return;
         }
 
-        var filled = claimSlots
-            .Where(slot => slot.Member is not null && slot.Color is not null)
-            .Select(slot => new ClaimedCard(slot.Member!, slot.Color!.Value))
-            .ToList();
-
-        if (filled.Count < 3)
+        var pickedMembers = claimSlots.Where(slot => slot.Member is not null).ToList();
+        if (pickedMembers.Count < 3)
         {
-            ClaimErrorText.Text = "Pick 3 to 5 cards and a color for each.";
+            ClaimErrorText.Text = "Pick 3 to 5 cards.";
             return;
         }
+
+        if (pickedMembers.Any(slot => slot.Color is null))
+        {
+            ClaimErrorText.Text = "Pick a color (orange, blue, or pink) for every card.";
+            return;
+        }
+
+        var filled = pickedMembers
+            .Select(slot => new ClaimedCard(slot.Member!, slot.Color!.Value))
+            .ToList();
 
         var payout = PayoutCalculator.TryCalculate(filled, currentRound.BonusMember, currentRound.Rows);
         if (payout is null)
@@ -544,14 +537,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var share = pendingPayout.Total / 3;
-        var deltas = seats.Select(seat =>
-        {
-            var change = seat.Id == claimWinner.Id ? pendingPayout.Total : -share;
-            return ApplyDelta(seat, change);
-        }).ToList();
-
-        ShowDeltas(deltas);
+        ShowDeltas(CoinSettlement.ApplySelfPulled(seats, claimWinner, pendingPayout));
     }
 
     private void ClaimDiscarded_OnClick(object sender, RoutedEventArgs e)
@@ -591,29 +577,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var deltas = seats.Select(seat =>
-        {
-            if (seat.Id == claimWinner.Id)
-            {
-                return ApplyDelta(seat, pendingPayout.Total);
-            }
-
-            if (seat.Id == payer.Id)
-            {
-                return ApplyDelta(seat, -pendingPayout.Total);
-            }
-
-            return new CoinDelta(seat, seat.Coins, 0, seat.Coins);
-        }).ToList();
-
-        ShowDeltas(deltas);
-    }
-
-    private static CoinDelta ApplyDelta(SeatState seat, int change)
-    {
-        var oldCoins = seat.Coins;
-        seat.Coins += change;
-        return new CoinDelta(seat, oldCoins, change, seat.Coins);
+        ShowDeltas(CoinSettlement.ApplyDiscarded(seats, claimWinner, payer, pendingPayout));
     }
 
     private void ShowDeltas(IReadOnlyList<CoinDelta> deltas)
@@ -663,7 +627,7 @@ public partial class MainWindow : Window
         }
 
         BonusCardHost.Child = CreateCardElement(round.BonusMember, true);
-        NewGameButton.Tag = round.CardsToRemove;
+        cardsToRemove = round.CardsToRemove;
     }
 
     private UIElement CreateRowShell(string label, string generation, IReadOnlyList<MemberCard>? members = null)
@@ -812,7 +776,7 @@ public partial class MainWindow : Window
                 Foreground = Brushes.White,
                 FontSize = 24,
                 FontWeight = FontWeights.Black,
-                Text = BuildBonusTopLabel(generation)
+                Text = GenerationLabels.For(generation)
             });
         }
 
@@ -831,29 +795,4 @@ public partial class MainWindow : Window
         return border;
     }
 
-    private static string BuildBonusTopLabel(string generation) => generation switch
-    {
-        "Gen0" => "0",
-        "Gen1" => "1",
-        "Gen2" => "2",
-        "Gen3" => "3",
-        "Gen4" => "4",
-        "Gen5" => "5",
-        "ID Gen1" => "ID1",
-        "ID Gen2" => "ID2",
-        "ID Gen3" => "ID3",
-        "Gamers" => "Ga",
-        "Promise" => "Pr",
-        "Myth" => "My",
-        "HoloX" => "X",
-        "Advent" => "Ad",
-        "ReGloss" => "Re",
-        _ => generation
-    };
-
-    private sealed class SlotDraft
-    {
-        public MemberCard? Member { get; set; }
-        public CardColor? Color { get; set; }
-    }
 }

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="PokajanRandomizer.Core/PokajanRandomizer.Core.csproj" />
+  <Project Path="PokajanRandomizer.Maui/PokajanRandomizer.Maui.csproj" />
+  <Project Path="RandomGens/RandomGens.csproj" />
+</Solution>

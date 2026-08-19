@@ -12,6 +12,6 @@
     <AssemblyName>PokajanRandomizer</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="..\members.json" LogicalName="members.json" />
+    <ProjectReference Include="..\PokajanRandomizer.Core\PokajanRandomizer.Core.csproj" />
   </ItemGroup>
 </Project>
