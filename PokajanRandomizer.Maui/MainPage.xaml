@@ -68,38 +68,33 @@
                 <Grid x:Name="BoardHost"
                       Grid.Row="0"
                       SizeChanged="BoardHost_OnSizeChanged">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                    <HorizontalStackLayout HorizontalOptions="Center"
+                                           VerticalOptions="Center"
+                                           Spacing="10">
+                        <Grid x:Name="CardsGrid"
+                              VerticalOptions="Center"
+                              RowSpacing="4"
+                              ColumnSpacing="3" />
 
-                    <Grid x:Name="CardsGrid"
-                          Grid.Column="0"
-                          HorizontalOptions="Center"
-                          VerticalOptions="Center"
-                          RowSpacing="4"
-                          ColumnSpacing="3" />
-
-                    <Border x:Name="BonusFrame"
-                            Grid.Column="1"
-                            VerticalOptions="Center"
-                            Margin="10,0,0,0"
-                            Padding="12,10"
-                            Stroke="#33FFFFFF"
-                            StrokeThickness="1"
-                            StrokeShape="RoundRectangle 12"
-                            BackgroundColor="#3DF3FFD6">
-                        <VerticalStackLayout Spacing="6">
-                            <Border x:Name="BonusCardHost"
-                                    HorizontalOptions="Center"
-                                    BackgroundColor="Transparent" />
-                            <Label x:Name="BonusTitle"
-                                   Text="BONUS"
-                                   TextColor="White"
-                                   FontAttributes="Bold"
-                                   HorizontalOptions="Center" />
-                        </VerticalStackLayout>
-                    </Border>
+                        <Border x:Name="BonusFrame"
+                                VerticalOptions="Center"
+                                Padding="8,8"
+                                Stroke="#33FFFFFF"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 12"
+                                BackgroundColor="#3DF3FFD6">
+                            <VerticalStackLayout Spacing="4">
+                                <Border x:Name="BonusCardHost"
+                                        HorizontalOptions="Center"
+                                        BackgroundColor="Transparent" />
+                                <Label x:Name="BonusTitle"
+                                       Text="BONUS"
+                                       TextColor="White"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </HorizontalStackLayout>
                 </Grid>
 
                 <Button x:Name="NewGameButton"
@@ -210,7 +205,7 @@
                             <ScrollView Orientation="Horizontal" Margin="0,10,0,0">
                                 <HorizontalStackLayout x:Name="ClaimSlotsHost"
                                                        HorizontalOptions="Center"
-                                                       Spacing="4" />
+                                                       Spacing="10" />
                             </ScrollView>
                             <Label x:Name="ClaimErrorText"
                                    Margin="0,8,0,0"

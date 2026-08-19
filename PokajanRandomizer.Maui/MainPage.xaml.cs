@@ -118,7 +118,7 @@ public partial class MainPage : ContentPage
         var fitH = availH * 0.72;
         const double hGap = 3;
         const double vGap = 4;
-        const double bonusPadX = 12;
+        const double bonusPadX = 8;
         var labelW = Math.Clamp(fitW * 0.05, 16, 32);
         var bonusText = Math.Clamp(fitH * 0.08, 11, 18);
         var bonusMargin = 10;
@@ -460,8 +460,8 @@ public partial class MainPage : ContentPage
 
         var column = new VerticalStackLayout
         {
-            Margin = new Thickness(4, 0),
-            WidthRequest = ClaimCardWidth + 8,
+            Spacing = 4,
+            WidthRequest = ClaimCardWidth,
             Children = { face }
         };
 
@@ -475,39 +475,63 @@ public partial class MainPage : ContentPage
 
     private View CreateColorRow(SlotDraft slot)
     {
+        const double gap = 4;
+        var chipW = Math.Max(8, Math.Min(12, (ClaimCardWidth - gap * 2) / 3));
+        var chipH = Math.Min(chipW, 10);
+
         return new HorizontalStackLayout
         {
             HorizontalOptions = LayoutOptions.Center,
-            Margin = new Thickness(0, 4, 0, 0),
-            Spacing = 4,
+            WidthRequest = ClaimCardWidth,
+            Spacing = gap,
             Children =
             {
-                CreateColorChip(slot, CardColor.Orange, OrangeColor),
-                CreateColorChip(slot, CardColor.Blue, BlueColor),
-                CreateColorChip(slot, CardColor.Pink, PinkColor)
+                CreateColorChip(slot, CardColor.Orange, OrangeColor, chipW, chipH),
+                CreateColorChip(slot, CardColor.Blue, BlueColor, chipW, chipH),
+                CreateColorChip(slot, CardColor.Pink, PinkColor, chipW, chipH)
             }
         };
     }
 
-    private View CreateColorChip(SlotDraft slot, CardColor color, Color brush)
+    private View CreateColorChip(SlotDraft slot, CardColor color, Color brush, double width, double height)
     {
         var selected = slot.Color == color;
-        var chip = new Border
+        var host = new Grid
         {
-            WidthRequest = 20,
-            HeightRequest = 20,
-            BackgroundColor = brush,
-            Stroke = selected ? Colors.White : Colors.Transparent,
-            StrokeThickness = selected ? 3 : 1,
-            StrokeShape = new RoundRectangle { CornerRadius = 4 }
+            WidthRequest = width,
+            HeightRequest = height,
+            MinimumWidthRequest = 0,
+            MinimumHeightRequest = 0,
+            MaximumWidthRequest = width,
+            MaximumHeightRequest = height
         };
-        AddTap(chip, () =>
+
+        if (selected)
+        {
+            host.Children.Add(new BoxView
+            {
+                Color = Colors.White,
+                CornerRadius = 3,
+                MinimumWidthRequest = 0,
+                MinimumHeightRequest = 0
+            });
+        }
+
+        host.Children.Add(new BoxView
+        {
+            Color = brush,
+            CornerRadius = 2,
+            Margin = selected ? new Thickness(2) : default,
+            MinimumWidthRequest = 0,
+            MinimumHeightRequest = 0
+        });
+        AddTap(host, () =>
         {
             slot.Color = color;
             ClaimErrorText.Text = string.Empty;
             RefreshClaimSlots();
         });
-        return chip;
+        return host;
     }
 
     private void OpenCardPicker(int index)
