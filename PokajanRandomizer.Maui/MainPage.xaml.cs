@@ -10,6 +10,8 @@ public partial class MainPage : ContentPage
     private static readonly Color OrangeColor = Color.FromRgb(240, 138, 42);
     private static readonly Color BlueColor = Color.FromRgb(61, 126, 255);
     private static readonly Color PinkColor = Color.FromRgb(242, 107, 160);
+    private static readonly Color GainColor = Color.FromRgb(110, 235, 140);
+    private static readonly Color LossColor = Color.FromRgb(255, 92, 92);
 
     private readonly MemberData memberData;
     private readonly IDispatcherTimer infoHintTimer;
@@ -750,21 +752,101 @@ public partial class MainPage : ContentPage
     {
         RefreshCoinLabels();
         ClaimDeltaHost.Children.Clear();
-        foreach (var delta in deltas)
+
+        var gained = deltas.Where(delta => delta.Change > 0).ToList();
+        var lost = deltas.Where(delta => delta.Change < 0).ToList();
+        if (gained.Count == 0 || lost.Count == 0)
         {
-            var sign = delta.Change > 0 ? "+" : string.Empty;
-            ClaimDeltaHost.Children.Add(new Label
-            {
-                Margin = new Thickness(0, 3),
-                TextColor = Colors.White,
-                FontSize = 14,
-                FontAttributes = FontAttributes.Bold,
-                HorizontalOptions = LayoutOptions.Center,
-                Text = $"{delta.Seat.DisplayName}:  {delta.OldCoins}  →  {sign}{delta.Change}  →  {delta.NewCoins}"
-            });
+            ShowClaimPage(ClaimDeltaPage);
+            return;
         }
 
+        if (lost.Count == 1)
+        {
+            ClaimDeltaHost.Children.Add(BuildDiscardedDeltaView(gained[0], lost[0]));
+            ShowClaimPage(ClaimDeltaPage);
+            return;
+        }
+
+        ClaimDeltaHost.Children.Add(BuildSelfPulledDeltaView(gained[0], lost));
         ShowClaimPage(ClaimDeltaPage);
+    }
+
+    private View BuildDiscardedDeltaView(CoinDelta winner, CoinDelta payer)
+    {
+        var font = Math.Clamp(cardHeight * 0.34, 15, 24);
+        return new HorizontalStackLayout
+        {
+            HorizontalOptions = LayoutOptions.Center,
+            Spacing = 12,
+            Children =
+            {
+                CreateDeltaName(winner, font),
+                CreateDeltaArrow("←", font),
+                CreateDeltaName(payer, font)
+            }
+        };
+    }
+
+    private View BuildSelfPulledDeltaView(CoinDelta winner, IReadOnlyList<CoinDelta> payers)
+    {
+        var font = Math.Clamp(cardHeight * 0.32, 14, 22);
+        var grid = new Grid
+        {
+            HorizontalOptions = LayoutOptions.Center,
+            ColumnSpacing = 10,
+            RowSpacing = 8
+        };
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+
+        for (var i = 0; i < payers.Count; i++)
+        {
+            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            var name = CreateDeltaName(payers[i], font);
+            var arrow = CreateDeltaArrow("→", font);
+            Grid.SetRow(name, i);
+            Grid.SetColumn(name, 0);
+            Grid.SetRow(arrow, i);
+            Grid.SetColumn(arrow, 1);
+            grid.Children.Add(name);
+            grid.Children.Add(arrow);
+        }
+
+        var winnerName = CreateDeltaName(winner, font + 2);
+        winnerName.VerticalOptions = LayoutOptions.Center;
+        Grid.SetRow(winnerName, 0);
+        Grid.SetColumn(winnerName, 2);
+        Grid.SetRowSpan(winnerName, Math.Max(1, payers.Count));
+        grid.Children.Add(winnerName);
+        return grid;
+    }
+
+    private static Label CreateDeltaName(CoinDelta delta, double fontSize)
+    {
+        var sign = delta.Change > 0 ? "+" : string.Empty;
+        return new Label
+        {
+            Text = $"{delta.Seat.DisplayName}  {sign}{delta.Change}",
+            TextColor = delta.Change > 0 ? GainColor : LossColor,
+            FontSize = fontSize,
+            FontAttributes = FontAttributes.Bold,
+            VerticalOptions = LayoutOptions.Center
+        };
+    }
+
+    private static Label CreateDeltaArrow(string arrow, double fontSize)
+    {
+        return new Label
+        {
+            Text = arrow,
+            TextColor = Colors.White,
+            FontSize = fontSize + 4,
+            FontAttributes = FontAttributes.Bold,
+            VerticalOptions = LayoutOptions.Center,
+            HorizontalOptions = LayoutOptions.Center
+        };
     }
 
     private void ClaimDeltaDone_OnClick(object? sender, EventArgs e)

@@ -21,6 +21,8 @@ public partial class MainWindow : Window
     private static readonly Brush OrangeBrush = new SolidColorBrush(Color.FromRgb(240, 138, 42));
     private static readonly Brush BlueBrush = new SolidColorBrush(Color.FromRgb(61, 126, 255));
     private static readonly Brush PinkBrush = new SolidColorBrush(Color.FromRgb(242, 107, 160));
+    private static readonly Brush GainBrush = new SolidColorBrush(Color.FromRgb(110, 235, 140));
+    private static readonly Brush LossBrush = new SolidColorBrush(Color.FromRgb(255, 92, 92));
 
     private readonly MemberData memberData;
     private readonly SettingsStore settingsStore = new();
@@ -634,21 +636,93 @@ public partial class MainWindow : Window
     {
         RefreshCoinLabels();
         ClaimDeltaHost.Children.Clear();
-        foreach (var delta in deltas)
+
+        var gained = deltas.Where(delta => delta.Change > 0).ToList();
+        var lost = deltas.Where(delta => delta.Change < 0).ToList();
+        if (gained.Count == 0 || lost.Count == 0)
         {
-            var sign = delta.Change > 0 ? "+" : string.Empty;
-            ClaimDeltaHost.Children.Add(new TextBlock
-            {
-                Margin = new Thickness(0, 6, 0, 6),
-                Foreground = Brushes.White,
-                FontSize = 22,
-                FontWeight = FontWeights.SemiBold,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Text = $"{delta.Seat.DisplayName}:  {delta.OldCoins}  →  {sign}{delta.Change}  →  {delta.NewCoins}"
-            });
+            ShowClaimPage(ClaimDeltaPage);
+            return;
         }
 
+        if (lost.Count == 1)
+        {
+            ClaimDeltaHost.Children.Add(BuildDiscardedDeltaView(gained[0], lost[0]));
+            ShowClaimPage(ClaimDeltaPage);
+            return;
+        }
+
+        ClaimDeltaHost.Children.Add(BuildSelfPulledDeltaView(gained[0], lost));
         ShowClaimPage(ClaimDeltaPage);
+    }
+
+    private static FrameworkElement BuildDiscardedDeltaView(CoinDelta winner, CoinDelta payer)
+    {
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        row.Children.Add(CreateDeltaName(winner, 26));
+        row.Children.Add(CreateDeltaArrow("←", 28));
+        row.Children.Add(CreateDeltaName(payer, 26));
+        return row;
+    }
+
+    private static FrameworkElement BuildSelfPulledDeltaView(CoinDelta winner, IReadOnlyList<CoinDelta> payers)
+    {
+        var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Center };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        for (var i = 0; i < payers.Count; i++)
+        {
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var name = CreateDeltaName(payers[i], 24);
+            var arrow = CreateDeltaArrow("→", 28);
+            Grid.SetRow(name, i);
+            Grid.SetColumn(name, 0);
+            Grid.SetRow(arrow, i);
+            Grid.SetColumn(arrow, 1);
+            grid.Children.Add(name);
+            grid.Children.Add(arrow);
+        }
+
+        var winnerName = CreateDeltaName(winner, 28);
+        winnerName.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetRow(winnerName, 0);
+        Grid.SetColumn(winnerName, 2);
+        Grid.SetRowSpan(winnerName, Math.Max(1, payers.Count));
+        grid.Children.Add(winnerName);
+        return grid;
+    }
+
+    private static TextBlock CreateDeltaName(CoinDelta delta, double fontSize)
+    {
+        var sign = delta.Change > 0 ? "+" : string.Empty;
+        return new TextBlock
+        {
+            Text = $"{delta.Seat.DisplayName}  {sign}{delta.Change}",
+            Foreground = delta.Change > 0 ? GainBrush : LossBrush,
+            FontSize = fontSize,
+            FontWeight = FontWeights.Bold,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 6, 0, 6)
+        };
+    }
+
+    private static TextBlock CreateDeltaArrow(string arrow, double fontSize)
+    {
+        return new TextBlock
+        {
+            Text = arrow,
+            Foreground = Brushes.White,
+            FontSize = fontSize,
+            FontWeight = FontWeights.Bold,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(16, 6, 16, 6)
+        };
     }
 
     private void ClaimDeltaDone_OnClick(object sender, RoutedEventArgs e)
