@@ -1,9 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
@@ -12,14 +10,36 @@ namespace PokajanRandomizer;
 public partial class MainWindow : Window
 {
     private const int SlotsPerRow = 5;
+    private const int ClaimSlotCount = 5;
     private const double SmallCardWidth = 74;
     private const double SmallCardHeight = 99;
     private const double BonusCardWidth = 188;
     private const double BonusCardHeight = 252;
+    private const double ClaimCardWidth = 88;
+    private const double ClaimCardHeight = 118;
+
+    private static readonly Brush OrangeBrush = new SolidColorBrush(Color.FromRgb(240, 138, 42));
+    private static readonly Brush BlueBrush = new SolidColorBrush(Color.FromRgb(61, 126, 255));
+    private static readonly Brush PinkBrush = new SolidColorBrush(Color.FromRgb(242, 107, 160));
 
     private readonly MemberData memberData;
     private readonly SettingsStore settingsStore = new();
     private readonly DispatcherTimer infoHintTimer;
+    private readonly SeatState[] seats =
+    {
+        new(0, "Player 1"),
+        new(1, "Player 2"),
+        new(2, "Player 3"),
+        new(3, "Player 4")
+    };
+    private readonly Button[] pokajanButtons = new Button[4];
+    private readonly TextBlock[] coinLabels = new TextBlock[4];
+    private readonly SlotDraft[] claimSlots = Enumerable.Range(0, ClaimSlotCount).Select(_ => new SlotDraft()).ToArray();
+
+    private RoundResult? currentRound;
+    private SeatState? claimWinner;
+    private PayoutResult? pendingPayout;
+    private int pickerSlotIndex = -1;
 
     public MainWindow()
     {
@@ -27,6 +47,8 @@ public partial class MainWindow : Window
 
         memberData = RoundPicker.LoadData();
         BuildEmptyRows();
+        BuildSeats();
+        SetPokajanEnabled(false);
 
         infoHintTimer = new DispatcherTimer
         {
@@ -68,7 +90,14 @@ public partial class MainWindow : Window
     private void NewGameButton_OnClick(object sender, RoutedEventArgs e)
     {
         DismissHint();
+        foreach (var seat in seats)
+        {
+            seat.Coins = 1000;
+        }
+
+        RefreshCoinLabels();
         RenderRound(RoundPicker.CreateRound(memberData));
+        SetPokajanEnabled(true);
     }
 
     private void InfoButton_OnClick(object sender, RoutedEventArgs e)
@@ -80,7 +109,26 @@ public partial class MainWindow : Window
     private void MainWindow_OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         DismissHint();
-        if (e.Key == Key.Escape && InfoOverlay.Visibility == Visibility.Visible)
+        if (e.Key != Key.Escape)
+        {
+            return;
+        }
+
+        if (CardPickerOverlay.Visibility == Visibility.Visible)
+        {
+            HideCardPicker();
+            e.Handled = true;
+            return;
+        }
+
+        if (ClaimOverlay.Visibility == Visibility.Visible)
+        {
+            HideClaimOverlay();
+            e.Handled = true;
+            return;
+        }
+
+        if (InfoOverlay.Visibility == Visibility.Visible)
         {
             HideInfoOverlay();
             e.Handled = true;
@@ -95,6 +143,11 @@ public partial class MainWindow : Window
     private void InfoPanel_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         HideInfoOverlay();
+        e.Handled = true;
+    }
+
+    private void ClaimPanel_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
         e.Handled = true;
     }
 
@@ -138,6 +191,457 @@ public partial class MainWindow : Window
         settingsStore.Save(settings);
     }
 
+    private void BuildSeats()
+    {
+        SeatHost1.Child = CreateSeatPanel(seats[0]);
+        SeatHost2.Child = CreateSeatPanel(seats[1]);
+        SeatHost3.Child = CreateSeatPanel(seats[2]);
+        SeatHost4.Child = CreateSeatPanel(seats[3]);
+    }
+
+    private FrameworkElement CreateSeatPanel(SeatState seat)
+    {
+        var nameLabel = new TextBlock
+        {
+            Foreground = Brushes.White,
+            FontSize = 22,
+            FontWeight = FontWeights.Bold,
+            VerticalAlignment = VerticalAlignment.Center,
+            Text = seat.DisplayName
+        };
+
+        var nameBox = new TextBox
+        {
+            Width = 140,
+            FontSize = 18,
+            Visibility = Visibility.Collapsed,
+            Text = seat.DisplayName
+        };
+
+        var penButton = new Button
+        {
+            Width = 32,
+            Height = 32,
+            Margin = new Thickness(8, 0, 0, 0),
+            Background = Brushes.Transparent,
+            BorderBrush = Brushes.Transparent,
+            Cursor = Cursors.Hand,
+            Content = new TextBlock
+            {
+                Text = "✎",
+                FontSize = 18,
+                Foreground = Brushes.White,
+                HorizontalAlignment = HorizontalAlignment.Center
+            }
+        };
+
+        void EndNameEdit()
+        {
+            seat.Name = string.IsNullOrWhiteSpace(nameBox.Text) ? seat.DefaultName : nameBox.Text.Trim();
+            nameLabel.Text = seat.DisplayName;
+            nameBox.Visibility = Visibility.Collapsed;
+            nameLabel.Visibility = Visibility.Visible;
+        }
+
+        penButton.Click += (_, _) =>
+        {
+            nameBox.Text = seat.DisplayName;
+            nameLabel.Visibility = Visibility.Collapsed;
+            nameBox.Visibility = Visibility.Visible;
+            nameBox.Focus();
+            nameBox.SelectAll();
+        };
+        nameBox.LostFocus += (_, _) => EndNameEdit();
+        nameBox.KeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Enter)
+            {
+                return;
+            }
+
+            EndNameEdit();
+            e.Handled = true;
+        };
+
+        var coins = new TextBlock
+        {
+            Margin = new Thickness(0, 6, 0, 10),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Foreground = Brushes.White,
+            FontSize = 30,
+            FontWeight = FontWeights.Black,
+            Text = seat.Coins.ToString()
+        };
+        coinLabels[seat.Id] = coins;
+
+        var pokajan = new Button
+        {
+            Width = 150,
+            Height = 42,
+            Background = new SolidColorBrush(Color.FromRgb(232, 255, 240)),
+            Foreground = new SolidColorBrush(Color.FromRgb(20, 87, 38)),
+            FontSize = 16,
+            FontWeight = FontWeights.Bold,
+            BorderBrush = Brushes.Transparent,
+            Content = "Pokajan!",
+            Tag = seat
+        };
+        pokajan.Click += PokajanButton_OnClick;
+        pokajanButtons[seat.Id] = pokajan;
+
+        var nameRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        nameRow.Children.Add(nameLabel);
+        nameRow.Children.Add(nameBox);
+        nameRow.Children.Add(penButton);
+
+        var panel = new StackPanel
+        {
+            MinWidth = 180,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        panel.Children.Add(nameRow);
+        panel.Children.Add(coins);
+        panel.Children.Add(pokajan);
+        return panel;
+    }
+
+    private void SetPokajanEnabled(bool enabled)
+    {
+        foreach (var button in pokajanButtons)
+        {
+            button.IsEnabled = enabled;
+        }
+    }
+
+    private void RefreshCoinLabels()
+    {
+        foreach (var seat in seats)
+        {
+            coinLabels[seat.Id].Text = seat.Coins.ToString();
+        }
+    }
+
+    private void PokajanButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: SeatState winner } || currentRound is null)
+        {
+            return;
+        }
+
+        DismissHint();
+        OpenClaim(winner);
+    }
+
+    private void OpenClaim(SeatState winner)
+    {
+        claimWinner = winner;
+        pendingPayout = null;
+        foreach (var slot in claimSlots)
+        {
+            slot.Member = null;
+            slot.Color = null;
+        }
+
+        ClaimPickTitle.Text = $"{winner.DisplayName}'s Pokajan";
+        ClaimErrorText.Text = string.Empty;
+        ShowClaimPage(ClaimPickPage);
+        RefreshClaimSlots();
+        ClaimOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void HideClaimOverlay()
+    {
+        HideCardPicker();
+        ClaimOverlay.Visibility = Visibility.Collapsed;
+        claimWinner = null;
+        pendingPayout = null;
+    }
+
+    private void ShowClaimPage(UIElement page)
+    {
+        ClaimPickPage.Visibility = Visibility.Collapsed;
+        ClaimSourcePage.Visibility = Visibility.Collapsed;
+        ClaimPayerPage.Visibility = Visibility.Collapsed;
+        ClaimDeltaPage.Visibility = Visibility.Collapsed;
+        page.Visibility = Visibility.Visible;
+    }
+
+    private void RefreshClaimSlots()
+    {
+        ClaimSlotsHost.Children.Clear();
+        for (var i = 0; i < claimSlots.Length; i++)
+        {
+            ClaimSlotsHost.Children.Add(CreateClaimSlot(i, claimSlots[i]));
+        }
+    }
+
+    private FrameworkElement CreateClaimSlot(int index, SlotDraft slot)
+    {
+        var column = new StackPanel
+        {
+            Margin = new Thickness(8, 0, 8, 0),
+            Width = ClaimCardWidth + 16
+        };
+
+        FrameworkElement face;
+        if (slot.Member is null)
+        {
+            face = CreateBlankSlot(ClaimCardWidth, ClaimCardHeight);
+        }
+        else
+        {
+            face = CreateCardElement(slot.Member, false, ClaimCardWidth, ClaimCardHeight);
+        }
+
+        face.Cursor = Cursors.Hand;
+        face.MouseLeftButtonDown += (_, _) => OpenCardPicker(index);
+        column.Children.Add(face);
+
+        if (slot.Member is not null)
+        {
+            column.Children.Add(CreateColorRow(index, slot));
+        }
+
+        return column;
+    }
+
+    private FrameworkElement CreateColorRow(int index, SlotDraft slot)
+    {
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+
+        row.Children.Add(CreateColorChip(slot, CardColor.Orange, OrangeBrush));
+        row.Children.Add(CreateColorChip(slot, CardColor.Blue, BlueBrush));
+        row.Children.Add(CreateColorChip(slot, CardColor.Pink, PinkBrush));
+        return row;
+    }
+
+    private Button CreateColorChip(SlotDraft slot, CardColor color, Brush brush)
+    {
+        var selected = slot.Color == color;
+        var button = new Button
+        {
+            Width = 22,
+            Height = 22,
+            Margin = new Thickness(3, 0, 3, 0),
+            Background = brush,
+            BorderBrush = selected ? Brushes.White : Brushes.Transparent,
+            BorderThickness = new Thickness(selected ? 3 : 1),
+            Cursor = Cursors.Hand,
+            Content = string.Empty
+        };
+        button.Click += (_, _) =>
+        {
+            slot.Color = color;
+            ClaimErrorText.Text = string.Empty;
+            RefreshClaimSlots();
+        };
+        return button;
+    }
+
+    private void OpenCardPicker(int index)
+    {
+        if (currentRound is null)
+        {
+            return;
+        }
+
+        pickerSlotIndex = index;
+        CardPickerHost.Children.Clear();
+        foreach (var member in currentRound.Rows.SelectMany(row => row.Members))
+        {
+            var card = CreateCardElement(member, false, ClaimCardWidth, ClaimCardHeight);
+            card.Cursor = Cursors.Hand;
+            card.Margin = new Thickness(6);
+            var picked = member;
+            card.MouseLeftButtonDown += (_, _) => PickClaimMember(picked);
+            CardPickerHost.Children.Add(card);
+        }
+
+        CardPickerOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void PickClaimMember(MemberCard member)
+    {
+        if (pickerSlotIndex < 0)
+        {
+            return;
+        }
+
+        var slot = claimSlots[pickerSlotIndex];
+        var sameMember = slot.Member is not null
+            && string.Equals(slot.Member.Member, member.Member, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(slot.Member.Generation, member.Generation, StringComparison.OrdinalIgnoreCase);
+        slot.Member = member;
+        if (!sameMember)
+        {
+            slot.Color = null;
+        }
+
+        ClaimErrorText.Text = string.Empty;
+        HideCardPicker();
+        RefreshClaimSlots();
+    }
+
+    private void HideCardPicker()
+    {
+        CardPickerOverlay.Visibility = Visibility.Collapsed;
+        pickerSlotIndex = -1;
+    }
+
+    private void CardPickerOverlay_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        HideCardPicker();
+    }
+
+    private void ClaimCancelButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        HideClaimOverlay();
+    }
+
+    private void ClaimConfirmButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (currentRound is null || claimWinner is null)
+        {
+            return;
+        }
+
+        var filled = claimSlots
+            .Where(slot => slot.Member is not null && slot.Color is not null)
+            .Select(slot => new ClaimedCard(slot.Member!, slot.Color!.Value))
+            .ToList();
+
+        if (filled.Count < 3)
+        {
+            ClaimErrorText.Text = "Pick 3 to 5 cards and a color for each.";
+            return;
+        }
+
+        var payout = PayoutCalculator.TryCalculate(filled, currentRound.BonusMember, currentRound.Rows);
+        if (payout is null)
+        {
+            ClaimErrorText.Text = "Need 3+ of the same member, or one full generation.";
+            return;
+        }
+
+        pendingPayout = payout;
+        ClaimPayoutHint.Text = $"{payout.Total} coins  ({payout.TableRate} + {payout.BonusExtra} bonus)";
+        ShowClaimPage(ClaimSourcePage);
+    }
+
+    private void ClaimSelfPulled_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (claimWinner is null || pendingPayout is null)
+        {
+            return;
+        }
+
+        var share = pendingPayout.Total / 3;
+        var deltas = seats.Select(seat =>
+        {
+            var change = seat.Id == claimWinner.Id ? pendingPayout.Total : -share;
+            return ApplyDelta(seat, change);
+        }).ToList();
+
+        ShowDeltas(deltas);
+    }
+
+    private void ClaimDiscarded_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (claimWinner is null)
+        {
+            return;
+        }
+
+        ClaimPayerHost.Children.Clear();
+        foreach (var seat in seats.Where(item => item.Id != claimWinner.Id))
+        {
+            var payer = seat;
+            var button = new Button
+            {
+                Width = 220,
+                Height = 50,
+                Margin = new Thickness(0, 0, 0, 12),
+                Background = new SolidColorBrush(Color.FromRgb(232, 255, 240)),
+                Foreground = new SolidColorBrush(Color.FromRgb(20, 87, 38)),
+                FontSize = 18,
+                FontWeight = FontWeights.Bold,
+                BorderBrush = Brushes.Transparent,
+                Content = payer.DisplayName
+            };
+            button.Click += (_, _) => ApplyDiscardPayout(payer);
+            ClaimPayerHost.Children.Add(button);
+        }
+
+        ShowClaimPage(ClaimPayerPage);
+    }
+
+    private void ApplyDiscardPayout(SeatState payer)
+    {
+        if (claimWinner is null || pendingPayout is null)
+        {
+            return;
+        }
+
+        var deltas = seats.Select(seat =>
+        {
+            if (seat.Id == claimWinner.Id)
+            {
+                return ApplyDelta(seat, pendingPayout.Total);
+            }
+
+            if (seat.Id == payer.Id)
+            {
+                return ApplyDelta(seat, -pendingPayout.Total);
+            }
+
+            return new CoinDelta(seat, seat.Coins, 0, seat.Coins);
+        }).ToList();
+
+        ShowDeltas(deltas);
+    }
+
+    private static CoinDelta ApplyDelta(SeatState seat, int change)
+    {
+        var oldCoins = seat.Coins;
+        seat.Coins += change;
+        return new CoinDelta(seat, oldCoins, change, seat.Coins);
+    }
+
+    private void ShowDeltas(IReadOnlyList<CoinDelta> deltas)
+    {
+        RefreshCoinLabels();
+        ClaimDeltaHost.Children.Clear();
+        foreach (var delta in deltas)
+        {
+            var sign = delta.Change > 0 ? "+" : string.Empty;
+            ClaimDeltaHost.Children.Add(new TextBlock
+            {
+                Margin = new Thickness(0, 6, 0, 6),
+                Foreground = Brushes.White,
+                FontSize = 22,
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Text = $"{delta.Seat.DisplayName}:  {delta.OldCoins}  →  {sign}{delta.Change}  →  {delta.NewCoins}"
+            });
+        }
+
+        ShowClaimPage(ClaimDeltaPage);
+    }
+
+    private void ClaimDeltaDone_OnClick(object sender, RoutedEventArgs e)
+    {
+        HideClaimOverlay();
+    }
+
     private void BuildEmptyRows()
     {
         RowsHost.Children.Clear();
@@ -151,6 +655,7 @@ public partial class MainWindow : Window
 
     private void RenderRound(RoundResult round)
     {
+        currentRound = round;
         RowsHost.Children.Clear();
         foreach (var row in round.Rows)
         {
@@ -176,11 +681,10 @@ public partial class MainWindow : Window
 
         while (cardsPanel.Children.Count < SlotsPerRow)
         {
-            cardsPanel.Children.Add(CreateBlankSlot());
+            cardsPanel.Children.Add(CreateBlankSlot(SmallCardWidth, SmallCardHeight));
         }
 
         var lineWidth = (SmallCardWidth + 8) * SlotsPerRow;
-
         var cardsColumn = new StackPanel
         {
             VerticalAlignment = VerticalAlignment.Center
@@ -215,16 +719,16 @@ public partial class MainWindow : Window
         return row;
     }
 
-    private FrameworkElement CreateCardElement(MemberCard member, bool isBonus)
+    private FrameworkElement CreateCardElement(MemberCard member, bool isBonus, double? widthOverride = null, double? heightOverride = null)
     {
         var image = AssetResolver.TryLoad(member);
         if (image is null)
         {
-            return CreatePlaceholderCard(member.Generation, member.Member, isBonus);
+            return CreatePlaceholderCard(member.Generation, member.Member, isBonus, widthOverride, heightOverride);
         }
 
-        var width = isBonus ? BonusCardWidth : SmallCardWidth;
-        var height = isBonus ? BonusCardHeight : SmallCardHeight;
+        var width = widthOverride ?? (isBonus ? BonusCardWidth : SmallCardWidth);
+        var height = heightOverride ?? (isBonus ? BonusCardHeight : SmallCardHeight);
 
         return new Border
         {
@@ -241,12 +745,12 @@ public partial class MainWindow : Window
         };
     }
 
-    private FrameworkElement CreateBlankSlot()
+    private static FrameworkElement CreateBlankSlot(double width, double height)
     {
         var slot = new Border
         {
-            Width = SmallCardWidth,
-            Height = SmallCardHeight,
+            Width = width,
+            Height = height,
             Margin = new Thickness(4, 0, 4, 0),
             CornerRadius = new CornerRadius(10),
             Background = new SolidColorBrush(Color.FromArgb(70, 255, 255, 255))
@@ -269,10 +773,15 @@ public partial class MainWindow : Window
         return slot;
     }
 
-    private FrameworkElement CreatePlaceholderCard(string? generation, string member, bool isBonus)
+    private FrameworkElement CreatePlaceholderCard(
+        string? generation,
+        string member,
+        bool isBonus,
+        double? widthOverride = null,
+        double? heightOverride = null)
     {
-        var width = isBonus ? BonusCardWidth : SmallCardWidth;
-        var height = isBonus ? BonusCardHeight : SmallCardHeight;
+        var width = widthOverride ?? (isBonus ? BonusCardWidth : SmallCardWidth);
+        var height = heightOverride ?? (isBonus ? BonusCardHeight : SmallCardHeight);
         var label = string.IsNullOrWhiteSpace(member) ? "?" : member;
 
         var border = new Border
@@ -338,7 +847,13 @@ public partial class MainWindow : Window
         "Myth" => "My",
         "HoloX" => "X",
         "Advent" => "Ad",
-        "ReGloss" => "Rg",
+        "ReGloss" => "Re",
         _ => generation
     };
+
+    private sealed class SlotDraft
+    {
+        public MemberCard? Member { get; set; }
+        public CardColor? Color { get; set; }
+    }
 }

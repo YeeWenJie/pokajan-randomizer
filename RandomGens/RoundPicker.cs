@@ -100,7 +100,7 @@ internal static class RoundPicker
         "Myth" => "My",
         "HoloX" => "X",
         "Advent" => "Ad",
-        "ReGloss" => "Rg",
+        "ReGloss" => "Re",
         "ID Gen1" => "ID1",
         "ID Gen2" => "ID2",
         "ID Gen3" => "ID3",

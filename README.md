@@ -55,3 +55,18 @@ Original Info steps:
 - Info rule 1: check who the bonus card is, shuffle that character’s 9 cards first, and take one out as the bonus card.
 - Info rule 2: shuffle the remaining cards.
 - Cards to remove is now **N − 1**, because that bonus card is already out. `N = (members × 9) − 1 − 100`
+
+### v3 — coins and Pokajan
+
+- App locks to fullscreen. Four seats around the board: Player 1 (down), Player 2 (right), Player 3 (up), Player 4 (left).
+- Each seat starts at **1000** coins. Tap the pen to rename. New Game resets coins to 1000.
+- **New Game** sits under the gen + bonus board.
+- After a round, **Pokajan!** opens a claim: pick 3–5 cards from the 4 gens, then orange / blue / pink. Tap a filled slot to pick again.
+- Valid hands: all the same member, or one full generation.
+- Payout (same color is a higher rate, not extra on top of the base):
+  - Triple: 120 / same color 840
+  - 3-card gen: 180 / same color 480
+  - 4-card gen: 300 / same color 840
+  - 5-card gen: 480 / same color 1800
+  - Bonus member in the claim: **+90 per card** (1 → +90, 3 → +270)
+- Then choose **Self pulled** (the other 3 split the payout) or **Discarded** (pick who pays the full amount). A +/- page shows the coin change.
