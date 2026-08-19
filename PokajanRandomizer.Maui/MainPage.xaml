@@ -20,7 +20,11 @@
         </Style>
     </ContentPage.Resources>
 
-    <Grid x:Name="RootGrid">
+    <AbsoluteLayout x:Name="PageHost" SafeAreaEdges="None">
+    <Grid x:Name="RootGrid"
+          AbsoluteLayout.LayoutBounds="0,0,1,1"
+          AbsoluteLayout.LayoutFlags="All"
+          SafeAreaEdges="None">
         <Grid.Background>
             <RadialGradientBrush Center="0.25,0.25" Radius="1.0">
                 <GradientStop Color="#2AA246" Offset="0.0" />
@@ -29,7 +33,7 @@
             </RadialGradientBrush>
         </Grid.Background>
 
-        <Grid x:Name="TableGrid" Padding="6,4">
+        <Grid x:Name="TableGrid" Padding="10,8">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -73,35 +77,28 @@
                           Grid.Column="0"
                           HorizontalOptions="Center"
                           VerticalOptions="Center"
-                          RowSpacing="3"
+                          RowSpacing="4"
                           ColumnSpacing="3" />
 
                     <Border x:Name="BonusFrame"
                             Grid.Column="1"
                             VerticalOptions="Center"
-                            Margin="8,0,0,0"
-                            Padding="6"
+                            Margin="10,0,0,0"
+                            Padding="12,10"
                             Stroke="#33FFFFFF"
                             StrokeThickness="1"
-                            StrokeShape="RoundRectangle 16"
+                            StrokeShape="RoundRectangle 12"
                             BackgroundColor="#3DF3FFD6">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
+                        <VerticalStackLayout Spacing="6">
                             <Border x:Name="BonusCardHost"
                                     HorizontalOptions="Center"
-                                    VerticalOptions="Center"
                                     BackgroundColor="Transparent" />
                             <Label x:Name="BonusTitle"
-                                   Grid.Row="1"
                                    Text="BONUS"
                                    TextColor="White"
                                    FontAttributes="Bold"
-                                   HorizontalOptions="Center"
-                                   Margin="0,4,0,0" />
-                        </Grid>
+                                   HorizontalOptions="Center" />
+                        </VerticalStackLayout>
                     </Border>
                 </Grid>
 
@@ -150,13 +147,17 @@
                        FontAttributes="Bold" />
             </Border>
         </HorizontalStackLayout>
+    </Grid>
 
-        <Grid x:Name="InfoOverlay" IsVisible="False">
-            <BoxView Color="#99000000">
-                <BoxView.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="InfoOverlay_OnTapped" />
-                </BoxView.GestureRecognizers>
-            </BoxView>
+        <Grid x:Name="InfoOverlay"
+              IsVisible="False"
+              AbsoluteLayout.LayoutBounds="0,0,1,1"
+              AbsoluteLayout.LayoutFlags="All"
+              BackgroundColor="#B3000000"
+              SafeAreaEdges="None">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="InfoOverlay_OnTapped" />
+            </Grid.GestureRecognizers>
             <ScrollView HorizontalOptions="Center"
                         VerticalOptions="Center"
                         Margin="20">
@@ -185,8 +186,12 @@
             </ScrollView>
         </Grid>
 
-        <Grid x:Name="ClaimOverlay" IsVisible="False">
-            <BoxView Color="#99000000" />
+        <Grid x:Name="ClaimOverlay"
+              IsVisible="False"
+              AbsoluteLayout.LayoutBounds="0,0,1,1"
+              AbsoluteLayout.LayoutFlags="All"
+              BackgroundColor="#B3000000"
+              SafeAreaEdges="None">
             <ScrollView HorizontalOptions="Fill"
                         VerticalOptions="Fill"
                         Margin="12">
@@ -291,12 +296,15 @@
             </ScrollView>
         </Grid>
 
-        <Grid x:Name="CardPickerOverlay" IsVisible="False">
-            <BoxView Color="#99000000">
-                <BoxView.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="CardPickerOverlay_OnTapped" />
-                </BoxView.GestureRecognizers>
-            </BoxView>
+        <Grid x:Name="CardPickerOverlay"
+              IsVisible="False"
+              AbsoluteLayout.LayoutBounds="0,0,1,1"
+              AbsoluteLayout.LayoutFlags="All"
+              BackgroundColor="#B3000000"
+              SafeAreaEdges="None">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="CardPickerOverlay_OnTapped" />
+            </Grid.GestureRecognizers>
             <Border HorizontalOptions="Center"
                     VerticalOptions="Center"
                     Margin="16"
@@ -318,5 +326,5 @@
                 </VerticalStackLayout>
             </Border>
         </Grid>
-    </Grid>
+    </AbsoluteLayout>
 </ContentPage>

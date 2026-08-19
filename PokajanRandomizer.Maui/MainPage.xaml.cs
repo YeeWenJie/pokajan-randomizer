@@ -114,31 +114,31 @@ public partial class MainPage : ContentPage
         lastBoardWidth = availW;
         lastBoardHeight = availH;
 
+        var fitW = availW * 0.86;
+        var fitH = availH * 0.72;
         const double hGap = 3;
-        const double vGap = 3;
-        const double bonusPad = 6;
-        var labelW = Math.Clamp(availW * 0.05, 18, 36);
-        var bonusText = Math.Clamp(availH * 0.09, 12, 22);
-        var bonusMargin = 8;
+        const double vGap = 4;
+        const double bonusPadX = 12;
+        var labelW = Math.Clamp(fitW * 0.05, 16, 32);
+        var bonusText = Math.Clamp(fitH * 0.08, 11, 18);
+        var bonusMargin = 10;
 
-        var cardH = (availH - vGap * (RowCount - 1)) / RowCount;
+        var cardH = (fitH - vGap * (RowCount - 1)) / RowCount;
         var cardW = cardH * CardAspect;
-        var bonusCardH = Math.Min(cardH * 2.5, availH - bonusText - bonusPad * 2);
+        var bonusCardH = Math.Min(cardH * 2.05, fitH * 0.78);
         var bonusCardW = bonusCardH * CardAspect;
-        var bonusFrameW = bonusCardW + bonusPad * 2;
-        var bonusFrameH = bonusCardH + bonusText + bonusPad * 2;
+        var bonusFrameW = bonusCardW + bonusPadX * 2;
         var cardsW = cardW * SlotsPerRow + hGap * (SlotsPerRow - 1) + labelW;
         var totalW = cardsW + bonusMargin + bonusFrameW;
 
-        if (totalW > availW)
+        if (totalW > fitW)
         {
-            var scale = availW / totalW;
+            var scale = fitW / totalW;
             cardW *= scale;
             cardH *= scale;
             bonusCardW *= scale;
             bonusCardH *= scale;
             bonusFrameW *= scale;
-            bonusFrameH *= scale;
             labelW *= scale;
             cardsW *= scale;
         }
@@ -149,12 +149,12 @@ public partial class MainPage : ContentPage
         bonusHeight = Math.Max(54, bonusCardH);
 
         CardsGrid.WidthRequest = cardsW;
-        CardsGrid.HeightRequest = cardHeight * RowCount + vGap * (RowCount - 1);
+        CardsGrid.HeightRequest = cardHeight * RowCount + 4 * (RowCount - 1);
         BonusFrame.WidthRequest = bonusFrameW;
-        BonusFrame.HeightRequest = bonusFrameH;
+        BonusFrame.HeightRequest = -1;
         BonusCardHost.WidthRequest = bonusWidth;
         BonusCardHost.HeightRequest = bonusHeight;
-        BonusTitle.FontSize = Math.Clamp(bonusText, 11, 22);
+        BonusTitle.FontSize = Math.Clamp(bonusText, 11, 18);
 
         ApplyChrome();
         RefreshBoard();
