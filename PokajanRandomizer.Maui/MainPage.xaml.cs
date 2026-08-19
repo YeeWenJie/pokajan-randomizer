@@ -15,6 +15,9 @@ public partial class MainPage : ContentPage
 
     private readonly MemberData memberData;
     private readonly IDispatcherTimer infoHintTimer;
+    private readonly IDispatcherTimer deltaAnimTimer;
+    private readonly List<(CoinDelta Delta, Label Label)> deltaAnimTargets = [];
+    private DateTime deltaAnimStarted;
     private readonly SeatState[] seats =
     {
         new(0, "Player 1"),
@@ -68,6 +71,10 @@ public partial class MainPage : ContentPage
         infoHintTimer = Dispatcher.CreateTimer();
         infoHintTimer.Interval = TimeSpan.FromSeconds(5);
         infoHintTimer.Tick += InfoHintTimer_OnTick;
+
+        deltaAnimTimer = Dispatcher.CreateTimer();
+        deltaAnimTimer.Interval = TimeSpan.FromMilliseconds(16);
+        deltaAnimTimer.Tick += DeltaAnimTimer_OnTick;
 
         Loaded += MainPage_OnLoaded;
     }
@@ -443,6 +450,7 @@ public partial class MainPage : ContentPage
 
     private void HideClaimOverlay()
     {
+        StopDeltaAnimation(snap: true);
         HideCardPicker();
         ClaimOverlay.IsVisible = false;
         claimWinner = null;
@@ -750,7 +758,7 @@ public partial class MainPage : ContentPage
 
     private void ShowDeltas(IReadOnlyList<CoinDelta> deltas)
     {
-        RefreshCoinLabels();
+        StopDeltaAnimation(snap: false);
         ClaimDeltaHost.Children.Clear();
 
         var gained = deltas.Where(delta => delta.Change > 0).ToList();
@@ -764,11 +772,13 @@ public partial class MainPage : ContentPage
         if (lost.Count == 1)
         {
             ClaimDeltaHost.Children.Add(BuildDiscardedDeltaView(gained[0], lost[0]));
+            StartDeltaAnimation();
             ShowClaimPage(ClaimDeltaPage);
             return;
         }
 
         ClaimDeltaHost.Children.Add(BuildSelfPulledDeltaView(gained[0], lost));
+        StartDeltaAnimation();
         ShowClaimPage(ClaimDeltaPage);
     }
 
@@ -781,9 +791,9 @@ public partial class MainPage : ContentPage
             Spacing = 12,
             Children =
             {
-                CreateDeltaName(winner, font),
-                CreateDeltaArrow("←", font),
-                CreateDeltaName(payer, font)
+                CreateDeltaLine(payer, font),
+                CreateDeltaArrow("→", font),
+                CreateDeltaLine(winner, font)
             }
         };
     }
@@ -804,7 +814,7 @@ public partial class MainPage : ContentPage
         for (var i = 0; i < payers.Count; i++)
         {
             grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-            var name = CreateDeltaName(payers[i], font);
+            var name = CreateDeltaLine(payers[i], font);
             var arrow = CreateDeltaArrow("→", font);
             Grid.SetRow(name, i);
             Grid.SetColumn(name, 0);
@@ -814,7 +824,7 @@ public partial class MainPage : ContentPage
             grid.Children.Add(arrow);
         }
 
-        var winnerName = CreateDeltaName(winner, font + 2);
+        var winnerName = CreateDeltaLine(winner, font + 2);
         winnerName.VerticalOptions = LayoutOptions.Center;
         Grid.SetRow(winnerName, 0);
         Grid.SetColumn(winnerName, 2);
@@ -823,17 +833,18 @@ public partial class MainPage : ContentPage
         return grid;
     }
 
-    private static Label CreateDeltaName(CoinDelta delta, double fontSize)
+    private Label CreateDeltaLine(CoinDelta delta, double fontSize)
     {
-        var sign = delta.Change > 0 ? "+" : string.Empty;
-        return new Label
+        var label = new Label
         {
-            Text = $"{delta.Seat.DisplayName}  {sign}{delta.Change}",
+            Text = CoinDeltaAnimator.FormatLine(delta.Seat.DisplayName, delta.OldCoins, delta.Change, delta.Change),
             TextColor = delta.Change > 0 ? GainColor : LossColor,
             FontSize = fontSize,
             FontAttributes = FontAttributes.Bold,
             VerticalOptions = LayoutOptions.Center
         };
+        deltaAnimTargets.Add((delta, label));
+        return label;
     }
 
     private static Label CreateDeltaArrow(string arrow, double fontSize)
@@ -847,6 +858,49 @@ public partial class MainPage : ContentPage
             VerticalOptions = LayoutOptions.Center,
             HorizontalOptions = LayoutOptions.Center
         };
+    }
+
+    private void StartDeltaAnimation()
+    {
+        deltaAnimStarted = DateTime.UtcNow;
+        ApplyDeltaAnim(0);
+        deltaAnimTimer.Start();
+    }
+
+    private void StopDeltaAnimation(bool snap)
+    {
+        deltaAnimTimer.Stop();
+        if (snap)
+        {
+            ApplyDeltaAnim(1);
+            RefreshCoinLabels();
+        }
+
+        deltaAnimTargets.Clear();
+    }
+
+    private void DeltaAnimTimer_OnTick(object? sender, EventArgs e)
+    {
+        var t = (DateTime.UtcNow - deltaAnimStarted).TotalMilliseconds / 2000.0;
+        if (t >= 1)
+        {
+            deltaAnimTimer.Stop();
+            ApplyDeltaAnim(1);
+            RefreshCoinLabels();
+            return;
+        }
+
+        ApplyDeltaAnim(t);
+    }
+
+    private void ApplyDeltaAnim(double t)
+    {
+        foreach (var (delta, label) in deltaAnimTargets)
+        {
+            var (coins, remaining) = CoinDeltaAnimator.At(delta, t);
+            label.Text = CoinDeltaAnimator.FormatLine(delta.Seat.DisplayName, coins, delta.Change, remaining);
+            coinLabels[delta.Seat.Id].Text = coins.ToString();
+        }
     }
 
     private void ClaimDeltaDone_OnClick(object? sender, EventArgs e)

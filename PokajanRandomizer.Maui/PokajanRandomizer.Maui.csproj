@@ -10,8 +10,8 @@
     <MauiXamlInflator>SourceGen</MauiXamlInflator>
     <ApplicationTitle>Pokajan Randomizer</ApplicationTitle>
     <ApplicationId>com.pokajan.randomizer</ApplicationId>
-    <ApplicationDisplayVersion>4.7</ApplicationDisplayVersion>
-    <ApplicationVersion>11</ApplicationVersion>
+    <ApplicationDisplayVersion>4.8</ApplicationDisplayVersion>
+    <ApplicationVersion>12</ApplicationVersion>
     <SupportedOSPlatformVersion>21.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 

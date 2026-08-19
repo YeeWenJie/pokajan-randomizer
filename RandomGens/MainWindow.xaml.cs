@@ -27,6 +27,9 @@ public partial class MainWindow : Window
     private readonly MemberData memberData;
     private readonly SettingsStore settingsStore = new();
     private readonly DispatcherTimer infoHintTimer;
+    private readonly DispatcherTimer deltaAnimTimer;
+    private readonly List<(CoinDelta Delta, TextBlock Label)> deltaAnimTargets = [];
+    private DateTime deltaAnimStarted;
     private readonly SeatState[] seats =
     {
         new(0, "Player 1"),
@@ -58,6 +61,12 @@ public partial class MainWindow : Window
             Interval = TimeSpan.FromSeconds(5)
         };
         infoHintTimer.Tick += InfoHintTimer_OnTick;
+
+        deltaAnimTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(16)
+        };
+        deltaAnimTimer.Tick += DeltaAnimTimer_OnTick;
 
         Loaded += MainWindow_OnLoaded;
         PreviewMouseDown += (_, _) => DismissHint();
@@ -346,6 +355,7 @@ public partial class MainWindow : Window
 
     private void HideClaimOverlay()
     {
+        StopDeltaAnimation(snap: true);
         HideCardPicker();
         ClaimOverlay.Visibility = Visibility.Collapsed;
         claimWinner = null;
@@ -634,7 +644,7 @@ public partial class MainWindow : Window
 
     private void ShowDeltas(IReadOnlyList<CoinDelta> deltas)
     {
-        RefreshCoinLabels();
+        StopDeltaAnimation(snap: false);
         ClaimDeltaHost.Children.Clear();
 
         var gained = deltas.Where(delta => delta.Change > 0).ToList();
@@ -648,28 +658,30 @@ public partial class MainWindow : Window
         if (lost.Count == 1)
         {
             ClaimDeltaHost.Children.Add(BuildDiscardedDeltaView(gained[0], lost[0]));
+            StartDeltaAnimation();
             ShowClaimPage(ClaimDeltaPage);
             return;
         }
 
         ClaimDeltaHost.Children.Add(BuildSelfPulledDeltaView(gained[0], lost));
+        StartDeltaAnimation();
         ShowClaimPage(ClaimDeltaPage);
     }
 
-    private static FrameworkElement BuildDiscardedDeltaView(CoinDelta winner, CoinDelta payer)
+    private FrameworkElement BuildDiscardedDeltaView(CoinDelta winner, CoinDelta payer)
     {
         var row = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        row.Children.Add(CreateDeltaName(winner, 26));
-        row.Children.Add(CreateDeltaArrow("←", 28));
-        row.Children.Add(CreateDeltaName(payer, 26));
+        row.Children.Add(CreateDeltaLine(payer, 26));
+        row.Children.Add(CreateDeltaArrow("→", 28));
+        row.Children.Add(CreateDeltaLine(winner, 26));
         return row;
     }
 
-    private static FrameworkElement BuildSelfPulledDeltaView(CoinDelta winner, IReadOnlyList<CoinDelta> payers)
+    private FrameworkElement BuildSelfPulledDeltaView(CoinDelta winner, IReadOnlyList<CoinDelta> payers)
     {
         var grid = new Grid { HorizontalAlignment = HorizontalAlignment.Center };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -679,7 +691,7 @@ public partial class MainWindow : Window
         for (var i = 0; i < payers.Count; i++)
         {
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            var name = CreateDeltaName(payers[i], 24);
+            var name = CreateDeltaLine(payers[i], 24);
             var arrow = CreateDeltaArrow("→", 28);
             Grid.SetRow(name, i);
             Grid.SetColumn(name, 0);
@@ -689,7 +701,7 @@ public partial class MainWindow : Window
             grid.Children.Add(arrow);
         }
 
-        var winnerName = CreateDeltaName(winner, 28);
+        var winnerName = CreateDeltaLine(winner, 28);
         winnerName.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetRow(winnerName, 0);
         Grid.SetColumn(winnerName, 2);
@@ -698,18 +710,19 @@ public partial class MainWindow : Window
         return grid;
     }
 
-    private static TextBlock CreateDeltaName(CoinDelta delta, double fontSize)
+    private TextBlock CreateDeltaLine(CoinDelta delta, double fontSize)
     {
-        var sign = delta.Change > 0 ? "+" : string.Empty;
-        return new TextBlock
+        var label = new TextBlock
         {
-            Text = $"{delta.Seat.DisplayName}  {sign}{delta.Change}",
+            Text = CoinDeltaAnimator.FormatLine(delta.Seat.DisplayName, delta.OldCoins, delta.Change, delta.Change),
             Foreground = delta.Change > 0 ? GainBrush : LossBrush,
             FontSize = fontSize,
             FontWeight = FontWeights.Bold,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 6, 0, 6)
         };
+        deltaAnimTargets.Add((delta, label));
+        return label;
     }
 
     private static TextBlock CreateDeltaArrow(string arrow, double fontSize)
@@ -723,6 +736,49 @@ public partial class MainWindow : Window
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(16, 6, 16, 6)
         };
+    }
+
+    private void StartDeltaAnimation()
+    {
+        deltaAnimStarted = DateTime.UtcNow;
+        ApplyDeltaAnim(0);
+        deltaAnimTimer.Start();
+    }
+
+    private void StopDeltaAnimation(bool snap)
+    {
+        deltaAnimTimer.Stop();
+        if (snap)
+        {
+            ApplyDeltaAnim(1);
+            RefreshCoinLabels();
+        }
+
+        deltaAnimTargets.Clear();
+    }
+
+    private void DeltaAnimTimer_OnTick(object? sender, EventArgs e)
+    {
+        var t = (DateTime.UtcNow - deltaAnimStarted).TotalMilliseconds / 2000.0;
+        if (t >= 1)
+        {
+            deltaAnimTimer.Stop();
+            ApplyDeltaAnim(1);
+            RefreshCoinLabels();
+            return;
+        }
+
+        ApplyDeltaAnim(t);
+    }
+
+    private void ApplyDeltaAnim(double t)
+    {
+        foreach (var (delta, label) in deltaAnimTargets)
+        {
+            var (coins, remaining) = CoinDeltaAnimator.At(delta, t);
+            label.Text = CoinDeltaAnimator.FormatLine(delta.Seat.DisplayName, coins, delta.Change, remaining);
+            coinLabels[delta.Seat.Id].Text = coins.ToString();
+        }
     }
 
     private void ClaimDeltaDone_OnClick(object sender, RoutedEventArgs e)
