@@ -445,6 +445,9 @@ public partial class MainWindow : Window
 
         pickerSlotIndex = index;
         CardPickerHost.Children.Clear();
+        CardPickerRemoveButton.Visibility = claimSlots[index].Member is null
+            ? Visibility.Collapsed
+            : Visibility.Visible;
         foreach (var member in currentRound.Rows.SelectMany(row => row.Members))
         {
             var card = CreateCardElement(member, false, ClaimCardWidth, ClaimCardHeight);
@@ -465,6 +468,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (CountOtherCopies(pickerSlotIndex, member) >= 3)
+        {
+            ClaimErrorText.Text = "A triple is 3 cards of the same member. Remove an extra card.";
+            HideCardPicker();
+            return;
+        }
+
         var slot = claimSlots[pickerSlotIndex];
         var sameMember = slot.Member is not null && PayoutCalculator.IsSameMember(slot.Member, member);
         slot.Member = member;
@@ -476,6 +486,46 @@ public partial class MainWindow : Window
         ClaimErrorText.Text = string.Empty;
         HideCardPicker();
         RefreshClaimSlots();
+    }
+
+    private void CardPickerRemoveButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (pickerSlotIndex < 0)
+        {
+            return;
+        }
+
+        var slot = claimSlots[pickerSlotIndex];
+        slot.Member = null;
+        slot.Color = null;
+        ClaimErrorText.Text = string.Empty;
+        HideCardPicker();
+        RefreshClaimSlots();
+    }
+
+    private int CountOtherCopies(int exceptIndex, MemberCard member)
+    {
+        var count = 0;
+        for (var i = 0; i < claimSlots.Length; i++)
+        {
+            if (i == exceptIndex)
+            {
+                continue;
+            }
+
+            var existing = claimSlots[i].Member;
+            if (existing is null)
+            {
+                continue;
+            }
+
+            if (PayoutCalculator.IsSameMember(existing, member))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private void HideCardPicker()
@@ -521,7 +571,7 @@ public partial class MainWindow : Window
         var payout = PayoutCalculator.TryCalculate(filled, currentRound.BonusMember, currentRound.Rows);
         if (payout is null)
         {
-            ClaimErrorText.Text = "Need 3+ of the same member, or one full generation.";
+            ClaimErrorText.Text = "Need 3 of the same member, or one full generation.";
             return;
         }
 

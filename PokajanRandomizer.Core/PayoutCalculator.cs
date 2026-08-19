@@ -49,6 +49,11 @@ public static class PayoutCalculator
 
     private static bool IsTriple(IReadOnlyList<ClaimedCard> cards)
     {
+        if (cards.Count != 3)
+        {
+            return false;
+        }
+
         var first = cards[0].Member;
         return cards.All(card => IsSameMember(card.Member, first));
     }

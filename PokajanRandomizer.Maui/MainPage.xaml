@@ -167,7 +167,9 @@
                         <Label x:Name="InfoBodyText"
                                Margin="0,12,0,0"
                                TextColor="White"
-                               FontSize="14" />
+                               FontSize="14"
+                               HorizontalTextAlignment="Start"
+                               LineBreakMode="WordWrap" />
                         <Label Margin="0,14,0,0"
                                HorizontalOptions="Center"
                                TextColor="#CCFFFFFF"
@@ -303,6 +305,9 @@
                     Padding="14,10"
                     StrokeShape="RoundRectangle 16"
                     BackgroundColor="#E6123A24">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="CardPickerPanel_OnTapped" />
+                </Border.GestureRecognizers>
                 <VerticalStackLayout>
                     <Label Text="Pick a card"
                            TextColor="White"
@@ -315,6 +320,13 @@
                                     JustifyContent="Start"
                                     AlignItems="Start" />
                     </ScrollView>
+                    <Button x:Name="CardPickerRemoveButton"
+                            Text="Remove card"
+                            Margin="0,10,0,0"
+                            HorizontalOptions="Center"
+                            BackgroundColor="#33FFFFFF"
+                            TextColor="White"
+                            Clicked="CardPickerRemoveButton_OnClick" />
                 </VerticalStackLayout>
             </Border>
         </Grid>

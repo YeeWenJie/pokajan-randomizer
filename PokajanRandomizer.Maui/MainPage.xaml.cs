@@ -37,7 +37,20 @@ public partial class MainPage : ContentPage
     private double lastBoardWidth;
     private double lastBoardHeight;
 
-    private double ClaimCardWidth => Math.Clamp(cardWidth * 1.15, 36, 72);
+    private double ClaimCardWidth
+    {
+        get
+        {
+            if (Width <= 1)
+            {
+                return Math.Clamp(cardWidth * 1.15, 36, 72);
+            }
+
+            var scaled = Math.Max(cardWidth * 1.25, Width * 0.075);
+            return Math.Clamp(scaled, 36, 128);
+        }
+    }
+
     private double ClaimCardHeight => ClaimCardWidth / CardAspect;
 
     public MainPage()
@@ -253,6 +266,7 @@ public partial class MainPage : ContentPage
     {
         DismissHint();
         InfoBodyText.Text = ShuffleInfo.BuildBody(cardsToRemove);
+        InfoBodyText.MaximumWidthRequest = Math.Max(280, Width * 0.62);
         InfoOverlay.IsVisible = true;
     }
 
@@ -476,9 +490,9 @@ public partial class MainPage : ContentPage
 
     private View CreateColorRow(SlotDraft slot)
     {
-        const double gap = 4;
-        var chipW = Math.Max(8, Math.Min(12, (ClaimCardWidth - gap * 2) / 3));
-        var chipH = Math.Min(chipW, 10);
+        var gap = Math.Clamp(ClaimCardWidth * 0.08, 3, 10);
+        var chipW = Math.Max(8, (ClaimCardWidth - gap * 2) / 3);
+        var chipH = chipW;
 
         return new HorizontalStackLayout
         {
@@ -497,6 +511,8 @@ public partial class MainPage : ContentPage
     private View CreateColorChip(SlotDraft slot, CardColor color, Color brush, double width, double height)
     {
         var selected = slot.Color == color;
+        var radius = Math.Max(2, width * 0.18);
+        var outline = selected ? Math.Max(1.5, width * 0.12) : 0;
         var host = new Grid
         {
             WidthRequest = width,
@@ -512,7 +528,7 @@ public partial class MainPage : ContentPage
             host.Children.Add(new BoxView
             {
                 Color = Colors.White,
-                CornerRadius = 3,
+                CornerRadius = radius,
                 MinimumWidthRequest = 0,
                 MinimumHeightRequest = 0
             });
@@ -521,8 +537,8 @@ public partial class MainPage : ContentPage
         host.Children.Add(new BoxView
         {
             Color = brush,
-            CornerRadius = 2,
-            Margin = selected ? new Thickness(2) : default,
+            CornerRadius = Math.Max(1.5, radius - 0.5),
+            Margin = new Thickness(outline),
             MinimumWidthRequest = 0,
             MinimumHeightRequest = 0
         });
@@ -547,6 +563,7 @@ public partial class MainPage : ContentPage
         var pickerHeight = Math.Min(Height * 0.55, 280);
         CardPickerScroll.MaximumHeightRequest = pickerHeight;
         CardPickerHost.WidthRequest = Math.Min(Width * 0.8, 720);
+        CardPickerRemoveButton.IsVisible = claimSlots[index].Member is not null;
         foreach (var member in currentRound.Rows.SelectMany(row => row.Members))
         {
             var card = CreateCardElement(member, false, ClaimCardWidth, ClaimCardHeight);
@@ -566,6 +583,13 @@ public partial class MainPage : ContentPage
             return;
         }
 
+        if (CountOtherCopies(pickerSlotIndex, member) >= 3)
+        {
+            ClaimErrorText.Text = "A triple is 3 cards of the same member. Remove an extra card.";
+            HideCardPicker();
+            return;
+        }
+
         var slot = claimSlots[pickerSlotIndex];
         var sameMember = slot.Member is not null && PayoutCalculator.IsSameMember(slot.Member, member);
         slot.Member = member;
@@ -579,6 +603,46 @@ public partial class MainPage : ContentPage
         RefreshClaimSlots();
     }
 
+    private void CardPickerRemoveButton_OnClick(object? sender, EventArgs e)
+    {
+        if (pickerSlotIndex < 0)
+        {
+            return;
+        }
+
+        var slot = claimSlots[pickerSlotIndex];
+        slot.Member = null;
+        slot.Color = null;
+        ClaimErrorText.Text = string.Empty;
+        HideCardPicker();
+        RefreshClaimSlots();
+    }
+
+    private int CountOtherCopies(int exceptIndex, MemberCard member)
+    {
+        var count = 0;
+        for (var i = 0; i < claimSlots.Length; i++)
+        {
+            if (i == exceptIndex)
+            {
+                continue;
+            }
+
+            var existing = claimSlots[i].Member;
+            if (existing is null)
+            {
+                continue;
+            }
+
+            if (PayoutCalculator.IsSameMember(existing, member))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private void HideCardPicker()
     {
         CardPickerOverlay.IsVisible = false;
@@ -588,6 +652,10 @@ public partial class MainPage : ContentPage
     private void CardPickerOverlay_OnTapped(object? sender, TappedEventArgs e)
     {
         HideCardPicker();
+    }
+
+    private static void CardPickerPanel_OnTapped(object? sender, TappedEventArgs e)
+    {
     }
 
     private void ClaimCancelButton_OnClick(object? sender, EventArgs e)
@@ -622,7 +690,7 @@ public partial class MainPage : ContentPage
         var payout = PayoutCalculator.TryCalculate(filled, currentRound.BonusMember, currentRound.Rows);
         if (payout is null)
         {
-            ClaimErrorText.Text = "Need 3+ of the same member, or one full generation.";
+            ClaimErrorText.Text = "Need 3 of the same member, or one full generation.";
             return;
         }
 

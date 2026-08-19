@@ -331,6 +331,17 @@
                         <WrapPanel x:Name="CardPickerHost"
                                    Width="880" />
                     </ScrollViewer>
+                    <Button x:Name="CardPickerRemoveButton"
+                            Width="180"
+                            Height="44"
+                            Margin="0,16,0,0"
+                            HorizontalAlignment="Center"
+                            Background="#33FFFFFF"
+                            Foreground="White"
+                            FontWeight="Bold"
+                            BorderBrush="#00FFFFFF"
+                            Click="CardPickerRemoveButton_OnClick"
+                            Content="Remove card" />
                 </StackPanel>
             </Border>
         </Grid>
