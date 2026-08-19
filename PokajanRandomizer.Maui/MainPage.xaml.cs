@@ -115,7 +115,8 @@ public partial class MainPage : ContentPage
         lastBoardHeight = availH;
 
         var fitW = availW * 0.86;
-        var fitH = availH * 0.72;
+        const double newGameReserve = 52;
+        var fitH = Math.Max(40, (availH - newGameReserve) * 0.70);
         const double hGap = 3;
         const double vGap = 4;
         const double bonusPadX = 8;
@@ -170,7 +171,7 @@ public partial class MainPage : ContentPage
         NewGameButton.HeightRequest = Math.Clamp(cardHeight * 0.5, 28, 44);
         NewGameButton.WidthRequest = Math.Clamp(cardWidth * 3.2, 110, 180);
         NewGameButton.FontSize = Math.Clamp(font + 2, 13, 18);
-        NewGameButton.Margin = new Thickness(0, 4, 0, 2);
+        NewGameButton.Margin = new Thickness(0);
 
         InfoButton.HeightRequest = buttonH;
         InfoButton.WidthRequest = Math.Clamp(cardWidth * 1.5, 52, 72);

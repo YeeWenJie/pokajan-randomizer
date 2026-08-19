@@ -60,50 +60,46 @@
             <Grid x:Name="CenterHost"
                   Grid.Row="1"
                   Grid.Column="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
                 <Grid x:Name="BoardHost"
-                      Grid.Row="0"
                       SizeChanged="BoardHost_OnSizeChanged">
-                    <HorizontalStackLayout HorizontalOptions="Center"
-                                           VerticalOptions="Center"
-                                           Spacing="10">
-                        <Grid x:Name="CardsGrid"
-                              VerticalOptions="Center"
-                              RowSpacing="4"
-                              ColumnSpacing="3" />
+                    <VerticalStackLayout HorizontalOptions="Center"
+                                         VerticalOptions="Center"
+                                         Spacing="10">
+                        <HorizontalStackLayout Spacing="10"
+                                               VerticalOptions="Center">
+                            <Grid x:Name="CardsGrid"
+                                  VerticalOptions="Center"
+                                  RowSpacing="4"
+                                  ColumnSpacing="3" />
 
-                        <Border x:Name="BonusFrame"
-                                VerticalOptions="Center"
-                                Padding="8,8"
-                                Stroke="#33FFFFFF"
-                                StrokeThickness="1"
-                                StrokeShape="RoundRectangle 12"
-                                BackgroundColor="#3DF3FFD6">
-                            <VerticalStackLayout Spacing="4">
-                                <Border x:Name="BonusCardHost"
-                                        HorizontalOptions="Center"
-                                        BackgroundColor="Transparent" />
-                                <Label x:Name="BonusTitle"
-                                       Text="BONUS"
-                                       TextColor="White"
-                                       FontAttributes="Bold"
-                                       HorizontalOptions="Center" />
-                            </VerticalStackLayout>
-                        </Border>
-                    </HorizontalStackLayout>
+                            <Border x:Name="BonusFrame"
+                                    VerticalOptions="Center"
+                                    Padding="8,8"
+                                    Stroke="#33FFFFFF"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 12"
+                                    BackgroundColor="#3DF3FFD6">
+                                <VerticalStackLayout Spacing="4">
+                                    <Border x:Name="BonusCardHost"
+                                            HorizontalOptions="Center"
+                                            BackgroundColor="Transparent" />
+                                    <Label x:Name="BonusTitle"
+                                           Text="BONUS"
+                                           TextColor="White"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </HorizontalStackLayout>
+
+                        <Button x:Name="NewGameButton"
+                                Text="New Game"
+                                HorizontalOptions="Center"
+                                BackgroundColor="#E8FFF0"
+                                TextColor="#145726"
+                                Clicked="NewGameButton_OnClick" />
+                    </VerticalStackLayout>
                 </Grid>
-
-                <Button x:Name="NewGameButton"
-                        Grid.Row="1"
-                        Text="New Game"
-                        HorizontalOptions="Center"
-                        BackgroundColor="#E8FFF0"
-                        TextColor="#145726"
-                        Clicked="NewGameButton_OnClick" />
             </Grid>
 
             <Border x:Name="SeatHost2"
@@ -116,6 +112,7 @@
                     Grid.Row="2"
                     Grid.Column="1"
                     HorizontalOptions="Center"
+                    Margin="0,10,0,0"
                     BackgroundColor="Transparent" />
         </Grid>
 
