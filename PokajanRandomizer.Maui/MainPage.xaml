@@ -4,22 +4,23 @@
              x:Class="PokajanRandomizer.Maui.MainPage"
              Title="Pokajan Randomizer"
              HideSoftInputOnTapped="True"
-             BackgroundColor="#1F7A34">
+             BackgroundColor="#1F7A34"
+             SafeAreaEdges="None">
     <ContentPage.Resources>
         <Style TargetType="Button">
             <Setter Property="FontAttributes" Value="Bold" />
             <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="10,6" />
-            <Setter Property="MinimumHeightRequest" Value="32" />
-            <Setter Property="MinimumWidthRequest" Value="32" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="MinimumHeightRequest" Value="0" />
+            <Setter Property="MinimumWidthRequest" Value="0" />
         </Style>
         <Style TargetType="Border">
             <Setter Property="StrokeThickness" Value="0" />
-            <Setter Property="StrokeShape" Value="RoundRectangle 12" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 10" />
         </Style>
     </ContentPage.Resources>
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.Background>
             <RadialGradientBrush Center="0.25,0.25" Radius="1.0">
                 <GradientStop Color="#2AA246" Offset="0.0" />
@@ -28,7 +29,7 @@
             </RadialGradientBrush>
         </Grid.Background>
 
-        <Grid Margin="10,6">
+        <Grid x:Name="TableGrid" Padding="6,4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -44,68 +45,72 @@
                     Grid.Row="0"
                     Grid.Column="1"
                     HorizontalOptions="Center"
-                    Margin="0,0,0,4"
                     BackgroundColor="Transparent" />
 
             <Border x:Name="SeatHost4"
                     Grid.Row="1"
                     Grid.Column="0"
                     VerticalOptions="Center"
-                    Margin="4,0,8,0"
                     BackgroundColor="Transparent" />
 
-            <Grid Grid.Row="1" Grid.Column="1">
+            <Grid x:Name="CenterHost"
+                  Grid.Row="1"
+                  Grid.Column="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <HorizontalStackLayout HorizontalOptions="Center"
-                                       VerticalOptions="Center"
-                                       Spacing="16">
-                    <VerticalStackLayout x:Name="RowsHost"
-                                         VerticalOptions="Center" />
+                <Grid x:Name="BoardHost"
+                      Grid.Row="0"
+                      SizeChanged="BoardHost_OnSizeChanged">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
 
-                    <Border WidthRequest="140"
-                            HeightRequest="188"
-                            Padding="8"
+                    <Grid x:Name="CardsGrid"
+                          Grid.Column="0"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center"
+                          RowSpacing="3"
+                          ColumnSpacing="3" />
+
+                    <Border x:Name="BonusFrame"
+                            Grid.Column="1"
+                            VerticalOptions="Center"
+                            Margin="8,0,0,0"
+                            Padding="6"
                             Stroke="#33FFFFFF"
                             StrokeThickness="1"
-                            StrokeShape="RoundRectangle 20"
-                            BackgroundColor="#3DF3FFD6"
-                            VerticalOptions="Center">
+                            StrokeShape="RoundRectangle 16"
+                            BackgroundColor="#3DF3FFD6">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Border x:Name="BonusCardHost"
-                                    WidthRequest="108"
-                                    HeightRequest="144"
                                     HorizontalOptions="Center"
                                     VerticalOptions="Center"
                                     BackgroundColor="Transparent" />
-                            <Label Grid.Row="1"
+                            <Label x:Name="BonusTitle"
+                                   Grid.Row="1"
                                    Text="BONUS"
                                    TextColor="White"
-                                   FontSize="22"
                                    FontAttributes="Bold"
                                    HorizontalOptions="Center"
-                                   Margin="0,8,0,0" />
+                                   Margin="0,4,0,0" />
                         </Grid>
                     </Border>
-                </HorizontalStackLayout>
+                </Grid>
 
                 <Button x:Name="NewGameButton"
                         Grid.Row="1"
                         Text="New Game"
-                        WidthRequest="180"
-                        HeightRequest="44"
-                        Margin="0,8,0,2"
                         HorizontalOptions="Center"
                         BackgroundColor="#E8FFF0"
                         TextColor="#145726"
-                        FontSize="18"
                         Clicked="NewGameButton_OnClick" />
             </Grid>
 
@@ -113,37 +118,34 @@
                     Grid.Row="1"
                     Grid.Column="2"
                     VerticalOptions="Center"
-                    Margin="8,0,4,0"
                     BackgroundColor="Transparent" />
 
             <Border x:Name="SeatHost1"
                     Grid.Row="2"
                     Grid.Column="1"
                     HorizontalOptions="Center"
-                    Margin="0,4,0,0"
                     BackgroundColor="Transparent" />
         </Grid>
 
         <HorizontalStackLayout HorizontalOptions="Start"
                                VerticalOptions="Start"
-                               Margin="14,10,0,0"
-                               Spacing="10">
+                               Margin="8,6,0,0"
+                               Spacing="8">
             <Button x:Name="InfoButton"
                     Text="Info"
-                    WidthRequest="64"
-                    HeightRequest="34"
                     BackgroundColor="#CCFFFFFF"
                     TextColor="#0D4A21"
                     Clicked="InfoButton_OnClick" />
             <Border x:Name="InfoHintPopup"
                     IsVisible="False"
-                    Padding="10,6"
+                    Padding="8,4"
                     Stroke="#66000000"
                     StrokeThickness="1"
-                    StrokeShape="RoundRectangle 12"
+                    StrokeShape="RoundRectangle 10"
                     BackgroundColor="#DDFFFFFF"
                     VerticalOptions="Center">
-                <Label Text="In case you dont know how to shuffle"
+                <Label x:Name="InfoHintLabel"
+                       Text="In case you dont know how to shuffle"
                        TextColor="#0D4A21"
                        FontAttributes="Bold" />
             </Border>
@@ -155,75 +157,72 @@
                     <TapGestureRecognizer Tapped="InfoOverlay_OnTapped" />
                 </BoxView.GestureRecognizers>
             </BoxView>
-            <Border HorizontalOptions="Center"
-                    VerticalOptions="Center"
-                    MaximumWidthRequest="640"
-                    Margin="28"
-                    Padding="28,24"
-                    StrokeShape="RoundRectangle 20"
-                    BackgroundColor="#E6123A24">
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="InfoOverlay_OnTapped" />
-                </Border.GestureRecognizers>
-                <VerticalStackLayout>
-                    <Label Text="How to shuffle"
-                           TextColor="White"
-                           FontSize="28"
-                           FontAttributes="Bold" />
-                    <Label x:Name="InfoBodyText"
-                           Margin="0,16,0,0"
-                           TextColor="White"
-                           FontSize="16"
-                           LineHeight="1.3" />
-                    <Label Margin="0,20,0,0"
-                           HorizontalOptions="Center"
-                           TextColor="#CCFFFFFF"
-                           FontSize="14"
-                           Text="Tap anywhere to close" />
-                </VerticalStackLayout>
-            </Border>
+            <ScrollView HorizontalOptions="Center"
+                        VerticalOptions="Center"
+                        Margin="20">
+                <Border Padding="20,16"
+                        StrokeShape="RoundRectangle 16"
+                        BackgroundColor="#E6123A24">
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="InfoOverlay_OnTapped" />
+                    </Border.GestureRecognizers>
+                    <VerticalStackLayout>
+                        <Label Text="How to shuffle"
+                               TextColor="White"
+                               FontSize="22"
+                               FontAttributes="Bold" />
+                        <Label x:Name="InfoBodyText"
+                               Margin="0,12,0,0"
+                               TextColor="White"
+                               FontSize="14" />
+                        <Label Margin="0,14,0,0"
+                               HorizontalOptions="Center"
+                               TextColor="#CCFFFFFF"
+                               FontSize="12"
+                               Text="Tap anywhere to close" />
+                    </VerticalStackLayout>
+                </Border>
+            </ScrollView>
         </Grid>
 
         <Grid x:Name="ClaimOverlay" IsVisible="False">
             <BoxView Color="#99000000" />
-            <ScrollView HorizontalOptions="Center"
+            <ScrollView HorizontalOptions="Fill"
+                        VerticalOptions="Fill"
+                        Margin="12">
+                <Border HorizontalOptions="Center"
                         VerticalOptions="Center"
-                        MaximumWidthRequest="920"
-                        Margin="20">
-                <Border Padding="24,20"
-                        StrokeShape="RoundRectangle 20"
+                        Padding="16,12"
+                        StrokeShape="RoundRectangle 16"
                         BackgroundColor="#E6123A24">
                     <Grid>
                         <VerticalStackLayout x:Name="ClaimPickPage">
                             <Label x:Name="ClaimPickTitle"
                                    Text="Pokajan"
                                    TextColor="White"
-                                   FontSize="24"
+                                   FontSize="20"
                                    FontAttributes="Bold" />
-                            <ScrollView Orientation="Horizontal"
-                                        Margin="0,16,0,0">
+                            <ScrollView Orientation="Horizontal" Margin="0,10,0,0">
                                 <HorizontalStackLayout x:Name="ClaimSlotsHost"
                                                        HorizontalOptions="Center"
                                                        Spacing="4" />
                             </ScrollView>
                             <Label x:Name="ClaimErrorText"
-                                   Margin="0,12,0,0"
+                                   Margin="0,8,0,0"
                                    HorizontalOptions="Center"
                                    TextColor="#FFD9A0"
-                                   FontSize="14"
+                                   FontSize="13"
                                    HorizontalTextAlignment="Center" />
                             <HorizontalStackLayout HorizontalOptions="Center"
-                                                   Margin="0,16,0,0"
-                                                   Spacing="12">
-                                <Button Text="Cancel"
-                                        WidthRequest="120"
-                                        HeightRequest="42"
+                                                   Margin="0,12,0,0"
+                                                   Spacing="10">
+                                <Button x:Name="ClaimCancelButton"
+                                        Text="Cancel"
                                         BackgroundColor="#33FFFFFF"
                                         TextColor="White"
                                         Clicked="ClaimCancelButton_OnClick" />
-                                <Button Text="Confirm"
-                                        WidthRequest="140"
-                                        HeightRequest="42"
+                                <Button x:Name="ClaimConfirmButton"
+                                        Text="Confirm"
                                         BackgroundColor="#E8FFF0"
                                         TextColor="#145726"
                                         Clicked="ClaimConfirmButton_OnClick" />
@@ -235,27 +234,23 @@
                                              HorizontalOptions="Center">
                             <Label Text="How did they Pokajan?"
                                    TextColor="White"
-                                   FontSize="24"
+                                   FontSize="20"
                                    FontAttributes="Bold"
                                    HorizontalOptions="Center"
                                    HorizontalTextAlignment="Center" />
                             <Label x:Name="ClaimPayoutHint"
-                                   Margin="0,10,0,0"
+                                   Margin="0,8,0,0"
                                    HorizontalOptions="Center"
                                    TextColor="#CCFFFFFF"
-                                   FontSize="16" />
+                                   FontSize="14" />
                             <HorizontalStackLayout HorizontalOptions="Center"
-                                                   Margin="0,20,0,0"
-                                                   Spacing="12">
+                                                   Margin="0,14,0,0"
+                                                   Spacing="10">
                                 <Button Text="Self pulled"
-                                        WidthRequest="160"
-                                        HeightRequest="46"
                                         BackgroundColor="#E8FFF0"
                                         TextColor="#145726"
                                         Clicked="ClaimSelfPulled_OnClick" />
                                 <Button Text="Discarded"
-                                        WidthRequest="160"
-                                        HeightRequest="46"
                                         BackgroundColor="#33FFFFFF"
                                         TextColor="White"
                                         Clicked="ClaimDiscarded_OnClick" />
@@ -267,11 +262,11 @@
                                              HorizontalOptions="Center">
                             <Label Text="Who pays?"
                                    TextColor="White"
-                                   FontSize="24"
+                                   FontSize="20"
                                    FontAttributes="Bold"
                                    HorizontalOptions="Center" />
                             <VerticalStackLayout x:Name="ClaimPayerHost"
-                                                 Margin="0,18,0,0" />
+                                                 Margin="0,12,0,0" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout x:Name="ClaimDeltaPage"
@@ -279,15 +274,13 @@
                                              HorizontalOptions="Center">
                             <Label Text="Coin change"
                                    TextColor="White"
-                                   FontSize="24"
+                                   FontSize="20"
                                    FontAttributes="Bold"
                                    HorizontalOptions="Center" />
                             <VerticalStackLayout x:Name="ClaimDeltaHost"
-                                                 Margin="0,18,0,0" />
+                                                 Margin="0,12,0,0" />
                             <Button Text="Done"
-                                    WidthRequest="160"
-                                    HeightRequest="44"
-                                    Margin="0,20,0,0"
+                                    Margin="0,14,0,0"
                                     HorizontalOptions="Center"
                                     BackgroundColor="#E8FFF0"
                                     TextColor="#145726"
@@ -306,19 +299,17 @@
             </BoxView>
             <Border HorizontalOptions="Center"
                     VerticalOptions="Center"
-                    MaximumWidthRequest="860"
-                    MaximumHeightRequest="360"
-                    Margin="24"
-                    Padding="20,16"
-                    StrokeShape="RoundRectangle 20"
+                    Margin="16"
+                    Padding="14,10"
+                    StrokeShape="RoundRectangle 16"
                     BackgroundColor="#E6123A24">
                 <VerticalStackLayout>
                     <Label Text="Pick a card"
                            TextColor="White"
-                           FontSize="22"
+                           FontSize="18"
                            FontAttributes="Bold" />
-                    <ScrollView MaximumHeightRequest="280"
-                                Margin="0,12,0,0">
+                    <ScrollView x:Name="CardPickerScroll"
+                                Margin="0,8,0,0">
                         <FlexLayout x:Name="CardPickerHost"
                                     Wrap="Wrap"
                                     JustifyContent="Start"

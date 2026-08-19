@@ -3,7 +3,9 @@
 public partial class MainPage : ContentPage
 {
     private const int SlotsPerRow = 5;
+    private const int RowCount = 4;
     private const int ClaimSlotCount = 5;
+    private const double CardAspect = 74.0 / 99.0;
 
     private static readonly Color OrangeColor = Color.FromRgb(240, 138, 42);
     private static readonly Color BlueColor = Color.FromRgb(61, 126, 255);
@@ -20,6 +22,7 @@ public partial class MainPage : ContentPage
     };
     private readonly Button[] pokajanButtons = new Button[4];
     private readonly Label[] coinLabels = new Label[4];
+    private readonly Label[] nameLabels = new Label[4];
     private readonly SlotDraft[] claimSlots = Enumerable.Range(0, ClaimSlotCount).Select(_ => new SlotDraft()).ToArray();
 
     private RoundResult? currentRound;
@@ -27,32 +30,25 @@ public partial class MainPage : ContentPage
     private PayoutResult? pendingPayout;
     private int pickerSlotIndex = -1;
     private int? cardsToRemove;
+    private double cardWidth = 36;
+    private double cardHeight = 48;
+    private double bonusWidth = 90;
+    private double bonusHeight = 120;
+    private double lastBoardWidth;
+    private double lastBoardHeight;
 
-    private double SmallCardWidth => CompactLayout ? 46 : 62;
-    private double SmallCardHeight => CompactLayout ? 62 : 84;
-    private double BonusCardWidth => CompactLayout ? 108 : 140;
-    private double BonusCardHeight => CompactLayout ? 144 : 188;
-    private double ClaimCardWidth => CompactLayout ? 54 : 72;
-    private double ClaimCardHeight => CompactLayout ? 72 : 96;
-
-    private static bool CompactLayout
-    {
-        get
-        {
-            var info = DeviceDisplay.MainDisplayInfo;
-            var dipWidth = Math.Max(info.Width, info.Height) / info.Density;
-            return dipWidth < 1000;
-        }
-    }
+    private double ClaimCardWidth => Math.Clamp(cardWidth * 1.15, 36, 72);
+    private double ClaimCardHeight => ClaimCardWidth / CardAspect;
 
     public MainPage()
     {
         InitializeComponent();
 
         memberData = RoundPicker.LoadData();
-        BuildEmptyRows();
+        InitCardsGrid();
         BuildSeats();
         SetPokajanEnabled(false);
+        ApplyChrome();
 
         infoHintTimer = Dispatcher.CreateTimer();
         infoHintTimer.Interval = TimeSpan.FromSeconds(5);
@@ -87,12 +83,148 @@ public partial class MainPage : ContentPage
 
     private void MainPage_OnLoaded(object? sender, EventArgs e)
     {
+        RelayoutBoard();
         if (HintSettings.InfoHintShown)
         {
             return;
         }
 
         infoHintTimer.Start();
+    }
+
+    private void BoardHost_OnSizeChanged(object? sender, EventArgs e)
+    {
+        RelayoutBoard();
+    }
+
+    private void RelayoutBoard()
+    {
+        var availW = BoardHost.Width;
+        var availH = BoardHost.Height;
+        if (availW <= 1 || availH <= 1)
+        {
+            return;
+        }
+
+        if (Math.Abs(availW - lastBoardWidth) < 1 && Math.Abs(availH - lastBoardHeight) < 1)
+        {
+            return;
+        }
+
+        lastBoardWidth = availW;
+        lastBoardHeight = availH;
+
+        const double hGap = 3;
+        const double vGap = 3;
+        const double bonusPad = 6;
+        var labelW = Math.Clamp(availW * 0.05, 18, 36);
+        var bonusText = Math.Clamp(availH * 0.09, 12, 22);
+        var bonusMargin = 8;
+
+        var cardH = (availH - vGap * (RowCount - 1)) / RowCount;
+        var cardW = cardH * CardAspect;
+        var bonusCardH = Math.Min(cardH * 2.5, availH - bonusText - bonusPad * 2);
+        var bonusCardW = bonusCardH * CardAspect;
+        var bonusFrameW = bonusCardW + bonusPad * 2;
+        var bonusFrameH = bonusCardH + bonusText + bonusPad * 2;
+        var cardsW = cardW * SlotsPerRow + hGap * (SlotsPerRow - 1) + labelW;
+        var totalW = cardsW + bonusMargin + bonusFrameW;
+
+        if (totalW > availW)
+        {
+            var scale = availW / totalW;
+            cardW *= scale;
+            cardH *= scale;
+            bonusCardW *= scale;
+            bonusCardH *= scale;
+            bonusFrameW *= scale;
+            bonusFrameH *= scale;
+            labelW *= scale;
+            cardsW *= scale;
+        }
+
+        cardWidth = Math.Max(16, cardW);
+        cardHeight = Math.Max(22, cardH);
+        bonusWidth = Math.Max(40, bonusCardW);
+        bonusHeight = Math.Max(54, bonusCardH);
+
+        CardsGrid.WidthRequest = cardsW;
+        CardsGrid.HeightRequest = cardHeight * RowCount + vGap * (RowCount - 1);
+        BonusFrame.WidthRequest = bonusFrameW;
+        BonusFrame.HeightRequest = bonusFrameH;
+        BonusCardHost.WidthRequest = bonusWidth;
+        BonusCardHost.HeightRequest = bonusHeight;
+        BonusTitle.FontSize = Math.Clamp(bonusText, 11, 22);
+
+        ApplyChrome();
+        RefreshBoard();
+    }
+
+    private void ApplyChrome()
+    {
+        var font = Math.Clamp(cardHeight * 0.28, 11, 18);
+        var coinFont = Math.Clamp(cardHeight * 0.36, 13, 24);
+        var buttonH = Math.Clamp(cardHeight * 0.42, 26, 40);
+        var buttonW = Math.Clamp(cardWidth * 2.4, 88, 140);
+
+        NewGameButton.HeightRequest = Math.Clamp(cardHeight * 0.5, 28, 44);
+        NewGameButton.WidthRequest = Math.Clamp(cardWidth * 3.2, 110, 180);
+        NewGameButton.FontSize = Math.Clamp(font + 2, 13, 18);
+        NewGameButton.Margin = new Thickness(0, 4, 0, 2);
+
+        InfoButton.HeightRequest = buttonH;
+        InfoButton.WidthRequest = Math.Clamp(cardWidth * 1.5, 52, 72);
+        InfoButton.FontSize = font;
+        InfoHintLabel.FontSize = Math.Max(11, font - 1);
+
+        for (var i = 0; i < seats.Length; i++)
+        {
+            if (nameLabels[i] is not null)
+            {
+                nameLabels[i].FontSize = font;
+            }
+
+            if (coinLabels[i] is not null)
+            {
+                coinLabels[i].FontSize = coinFont;
+            }
+
+            if (pokajanButtons[i] is not null)
+            {
+                pokajanButtons[i].HeightRequest = buttonH;
+                pokajanButtons[i].WidthRequest = buttonW;
+                pokajanButtons[i].FontSize = Math.Max(11, font - 1);
+            }
+        }
+    }
+
+    private void InitCardsGrid()
+    {
+        CardsGrid.RowDefinitions.Clear();
+        CardsGrid.ColumnDefinitions.Clear();
+        for (var row = 0; row < RowCount; row++)
+        {
+            CardsGrid.RowDefinitions.Add(new RowDefinition(GridLength.Star));
+        }
+
+        for (var col = 0; col < SlotsPerRow; col++)
+        {
+            CardsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+        }
+
+        CardsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        RefreshBoard();
+    }
+
+    private void RefreshBoard()
+    {
+        if (currentRound is null)
+        {
+            BuildEmptyRows();
+            return;
+        }
+
+        RenderRound(currentRound, resetTag: false);
     }
 
     private void InfoHintTimer_OnTick(object? sender, EventArgs e)
@@ -147,27 +279,28 @@ public partial class MainPage : ContentPage
 
     private void BuildSeats()
     {
-        SeatHost1.Content = CreateSeatPanel(seats[0]);
-        SeatHost2.Content = CreateSeatPanel(seats[1]);
-        SeatHost3.Content = CreateSeatPanel(seats[2]);
-        SeatHost4.Content = CreateSeatPanel(seats[3]);
+        SeatHost1.Content = CreateSeatPanel(seats[0], horizontal: true);
+        SeatHost2.Content = CreateSeatPanel(seats[1], horizontal: false);
+        SeatHost3.Content = CreateSeatPanel(seats[2], horizontal: true);
+        SeatHost4.Content = CreateSeatPanel(seats[3], horizontal: false);
     }
 
-    private View CreateSeatPanel(SeatState seat)
+    private View CreateSeatPanel(SeatState seat, bool horizontal)
     {
         var nameLabel = new Label
         {
             TextColor = Colors.White,
-            FontSize = CompactLayout ? 16 : 20,
             FontAttributes = FontAttributes.Bold,
             VerticalOptions = LayoutOptions.Center,
+            LineBreakMode = LineBreakMode.TailTruncation,
             Text = seat.DisplayName
         };
+        nameLabels[seat.Id] = nameLabel;
 
         var nameBox = new Entry
         {
-            WidthRequest = 120,
-            FontSize = 16,
+            WidthRequest = 110,
+            FontSize = 14,
             IsVisible = false,
             Text = seat.DisplayName,
             TextColor = Colors.White,
@@ -177,12 +310,12 @@ public partial class MainPage : ContentPage
         var penButton = new Button
         {
             Text = "✎",
-            WidthRequest = 32,
-            HeightRequest = 32,
+            WidthRequest = 28,
+            HeightRequest = 28,
             Padding = 0,
             BackgroundColor = Colors.Transparent,
             TextColor = Colors.White,
-            FontSize = 16
+            FontSize = 14
         };
 
         void EndNameEdit()
@@ -205,10 +338,8 @@ public partial class MainPage : ContentPage
 
         var coins = new Label
         {
-            Margin = new Thickness(0, 4, 0, 6),
             HorizontalOptions = LayoutOptions.Center,
             TextColor = Colors.White,
-            FontSize = CompactLayout ? 22 : 28,
             FontAttributes = FontAttributes.Bold,
             Text = seat.Coins.ToString()
         };
@@ -217,11 +348,8 @@ public partial class MainPage : ContentPage
         var pokajan = new Button
         {
             Text = "Pokajan!",
-            WidthRequest = CompactLayout ? 120 : 140,
-            HeightRequest = 38,
             BackgroundColor = Color.FromRgb(232, 255, 240),
-            TextColor = Color.FromRgb(20, 87, 38),
-            FontSize = 14
+            TextColor = Color.FromRgb(20, 87, 38)
         };
         pokajan.Clicked += (_, _) =>
         {
@@ -235,21 +363,31 @@ public partial class MainPage : ContentPage
         };
         pokajanButtons[seat.Id] = pokajan;
 
+        var nameRow = new HorizontalStackLayout
+        {
+            HorizontalOptions = LayoutOptions.Center,
+            Spacing = 2,
+            Children = { nameLabel, nameBox, penButton }
+        };
+
+        if (horizontal)
+        {
+            coins.Margin = new Thickness(8, 0);
+            pokajan.Margin = new Thickness(8, 0, 0, 0);
+            return new HorizontalStackLayout
+            {
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                Spacing = 4,
+                Children = { nameRow, coins, pokajan }
+            };
+        }
+
+        coins.Margin = new Thickness(0, 2, 0, 4);
         return new VerticalStackLayout
         {
-            MinimumWidthRequest = CompactLayout ? 130 : 160,
             HorizontalOptions = LayoutOptions.Center,
-            Children =
-            {
-                new HorizontalStackLayout
-                {
-                    HorizontalOptions = LayoutOptions.Center,
-                    Spacing = 4,
-                    Children = { nameLabel, nameBox, penButton }
-                },
-                coins,
-                pokajan
-            }
+            Children = { nameRow, coins, pokajan }
         };
     }
 
@@ -322,8 +460,8 @@ public partial class MainPage : ContentPage
 
         var column = new VerticalStackLayout
         {
-            Margin = new Thickness(6, 0),
-            WidthRequest = ClaimCardWidth + 12,
+            Margin = new Thickness(4, 0),
+            WidthRequest = ClaimCardWidth + 8,
             Children = { face }
         };
 
@@ -340,8 +478,8 @@ public partial class MainPage : ContentPage
         return new HorizontalStackLayout
         {
             HorizontalOptions = LayoutOptions.Center,
-            Margin = new Thickness(0, 6, 0, 0),
-            Spacing = 6,
+            Margin = new Thickness(0, 4, 0, 0),
+            Spacing = 4,
             Children =
             {
                 CreateColorChip(slot, CardColor.Orange, OrangeColor),
@@ -356,8 +494,8 @@ public partial class MainPage : ContentPage
         var selected = slot.Color == color;
         var chip = new Border
         {
-            WidthRequest = 22,
-            HeightRequest = 22,
+            WidthRequest = 20,
+            HeightRequest = 20,
             BackgroundColor = brush,
             Stroke = selected ? Colors.White : Colors.Transparent,
             StrokeThickness = selected ? 3 : 1,
@@ -381,10 +519,13 @@ public partial class MainPage : ContentPage
 
         pickerSlotIndex = index;
         CardPickerHost.Children.Clear();
+        var pickerHeight = Math.Min(Height * 0.55, 280);
+        CardPickerScroll.MaximumHeightRequest = pickerHeight;
+        CardPickerHost.WidthRequest = Math.Min(Width * 0.8, 720);
         foreach (var member in currentRound.Rows.SelectMany(row => row.Members))
         {
             var card = CreateCardElement(member, false, ClaimCardWidth, ClaimCardHeight);
-            card.Margin = new Thickness(6);
+            card.Margin = new Thickness(4);
             var picked = member;
             AddTap(card, () => PickClaimMember(picked));
             CardPickerHost.Children.Add(card);
@@ -489,12 +630,11 @@ public partial class MainPage : ContentPage
             var button = new Button
             {
                 Text = payer.DisplayName,
-                WidthRequest = 200,
-                HeightRequest = 44,
-                Margin = new Thickness(0, 0, 0, 10),
+                WidthRequest = Math.Clamp(cardWidth * 4, 140, 220),
+                HeightRequest = Math.Clamp(cardHeight * 0.5, 32, 44),
+                Margin = new Thickness(0, 0, 0, 8),
                 BackgroundColor = Color.FromRgb(232, 255, 240),
-                TextColor = Color.FromRgb(20, 87, 38),
-                FontSize = 16
+                TextColor = Color.FromRgb(20, 87, 38)
             };
             button.Clicked += (_, _) => ApplyDiscardPayout(payer);
             ClaimPayerHost.Children.Add(button);
@@ -522,9 +662,9 @@ public partial class MainPage : ContentPage
             var sign = delta.Change > 0 ? "+" : string.Empty;
             ClaimDeltaHost.Children.Add(new Label
             {
-                Margin = new Thickness(0, 4),
+                Margin = new Thickness(0, 3),
                 TextColor = Colors.White,
-                FontSize = 16,
+                FontSize = 14,
                 FontAttributes = FontAttributes.Bold,
                 HorizontalOptions = LayoutOptions.Center,
                 Text = $"{delta.Seat.DisplayName}:  {delta.OldCoins}  →  {sign}{delta.Change}  →  {delta.NewCoins}"
@@ -541,82 +681,50 @@ public partial class MainPage : ContentPage
 
     private void BuildEmptyRows()
     {
-        RowsHost.Children.Clear();
-        for (var i = 0; i < 4; i++)
-        {
-            RowsHost.Children.Add(CreateRowShell($"Row {i + 1}", string.Empty));
-        }
-
-        BonusCardHost.Content = CreatePlaceholderCard(null, "Bonus", true);
+        FillCardsGrid(null);
+        BonusCardHost.Content = CreatePlaceholderCard(null, "Bonus", true, bonusWidth, bonusHeight);
     }
 
-    private void RenderRound(RoundResult round)
+    private void RenderRound(RoundResult round, bool resetTag = true)
     {
         currentRound = round;
-        RowsHost.Children.Clear();
-        foreach (var row in round.Rows)
+        FillCardsGrid(round.Rows);
+        BonusCardHost.Content = CreateCardElement(round.BonusMember, true, bonusWidth, bonusHeight);
+        if (resetTag)
         {
-            RowsHost.Children.Add(CreateRowShell(row.Label, row.Generation, row.Members));
+            cardsToRemove = round.CardsToRemove;
         }
-
-        BonusCardHost.Content = CreateCardElement(round.BonusMember, true);
-        cardsToRemove = round.CardsToRemove;
     }
 
-    private View CreateRowShell(string label, string generation, IReadOnlyList<MemberCard>? members = null)
+    private void FillCardsGrid(IReadOnlyList<GenerationRow>? rows)
     {
-        var cardsPanel = new HorizontalStackLayout
+        CardsGrid.Children.Clear();
+        for (var row = 0; row < RowCount; row++)
         {
-            VerticalOptions = LayoutOptions.Center,
-            Spacing = 0
-        };
+            var members = rows is not null && row < rows.Count
+                ? rows[row].Members
+                : Array.Empty<MemberCard>();
+            var label = rows is not null && row < rows.Count ? rows[row].Label : string.Empty;
 
-        foreach (var member in members ?? Array.Empty<MemberCard>())
-        {
-            cardsPanel.Children.Add(CreateCardElement(member, false));
-        }
-
-        while (cardsPanel.Children.Count < SlotsPerRow)
-        {
-            cardsPanel.Children.Add(CreateBlankSlot(SmallCardWidth, SmallCardHeight));
-        }
-
-        var lineWidth = (SmallCardWidth + 8) * SlotsPerRow;
-        var cardsColumn = new VerticalStackLayout
-        {
-            VerticalOptions = LayoutOptions.Center,
-            Children =
+            for (var col = 0; col < SlotsPerRow; col++)
             {
-                cardsPanel,
-                new BoxView
-                {
-                    Margin = new Thickness(4, 4, 0, 0),
-                    HeightRequest = 2,
-                    WidthRequest = lineWidth,
-                    HorizontalOptions = LayoutOptions.Start,
-                    Color = Color.FromArgb("#5AFFFFFF")
-                }
+                View cell = col < members.Count
+                    ? CreateCardElement(members[col], false)
+                    : CreateBlankSlot();
+                CardsGrid.Add(cell, col, row);
             }
-        };
 
-        return new HorizontalStackLayout
-        {
-            Margin = new Thickness(0, 2),
-            VerticalOptions = LayoutOptions.Center,
-            Children =
+            var genLabel = new Label
             {
-                cardsColumn,
-                new Label
-                {
-                    Margin = new Thickness(8, 0, 0, 6),
-                    VerticalOptions = LayoutOptions.Center,
-                    TextColor = Color.FromArgb("#BEFFFFFF"),
-                    FontSize = CompactLayout ? 20 : 26,
-                    FontAttributes = FontAttributes.Bold,
-                    Text = string.IsNullOrWhiteSpace(generation) ? string.Empty : label
-                }
-            }
-        };
+                Text = label,
+                TextColor = Color.FromArgb("#BEFFFFFF"),
+                FontAttributes = FontAttributes.Bold,
+                FontSize = Math.Clamp(cardHeight * 0.38, 12, 24),
+                VerticalOptions = LayoutOptions.Center,
+                Margin = new Thickness(6, 0, 0, 0)
+            };
+            CardsGrid.Add(genLabel, SlotsPerRow, row);
+        }
     }
 
     private View CreateCardElement(MemberCard member, bool isBonus, double? widthOverride = null, double? heightOverride = null)
@@ -627,13 +735,8 @@ public partial class MainPage : ContentPage
             return CreatePlaceholderCard(member.Generation, member.Member, isBonus, widthOverride, heightOverride);
         }
 
-        var width = widthOverride ?? (isBonus ? BonusCardWidth : SmallCardWidth);
-        var height = heightOverride ?? (isBonus ? BonusCardHeight : SmallCardHeight);
-        return new Border
+        var border = new Border
         {
-            WidthRequest = width,
-            HeightRequest = height,
-            Margin = isBonus ? 0 : new Thickness(3, 0),
             StrokeThickness = 0,
             BackgroundColor = Colors.Transparent,
             Content = new Image
@@ -642,27 +745,28 @@ public partial class MainPage : ContentPage
                 Aspect = Aspect.Fill
             }
         };
+        ApplyCardSize(border, isBonus, widthOverride, heightOverride);
+        return border;
     }
 
-    private static View CreateBlankSlot(double width, double height)
+    private View CreateBlankSlot(double? widthOverride = null, double? heightOverride = null)
     {
-        return new Border
+        var slot = new Border
         {
-            WidthRequest = width,
-            HeightRequest = height,
-            Margin = new Thickness(3, 0),
-            StrokeShape = new RoundRectangle { CornerRadius = 10 },
+            StrokeShape = new RoundRectangle { CornerRadius = 8 },
             BackgroundColor = Color.FromArgb("#46FFFFFF"),
             Content = new Label
             {
                 Text = "▶",
                 TextColor = Color.FromArgb("#A0FFFFFF"),
-                FontSize = 16,
+                FontSize = Math.Clamp(cardHeight * 0.22, 10, 16),
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center,
                 HorizontalTextAlignment = TextAlignment.Center
             }
         };
+        ApplyCardSize(slot, false, widthOverride, heightOverride);
+        return slot;
     }
 
     private View CreatePlaceholderCard(
@@ -672,8 +776,6 @@ public partial class MainPage : ContentPage
         double? widthOverride = null,
         double? heightOverride = null)
     {
-        var width = widthOverride ?? (isBonus ? BonusCardWidth : SmallCardWidth);
-        var height = heightOverride ?? (isBonus ? BonusCardHeight : SmallCardHeight);
         var label = string.IsNullOrWhiteSpace(member) ? "?" : member;
         var stack = new VerticalStackLayout
         {
@@ -687,7 +789,7 @@ public partial class MainPage : ContentPage
             {
                 HorizontalOptions = LayoutOptions.Center,
                 TextColor = Colors.White,
-                FontSize = 18,
+                FontSize = Math.Clamp(bonusHeight * 0.12, 12, 20),
                 FontAttributes = FontAttributes.Bold,
                 Text = GenerationLabels.For(generation)
             });
@@ -695,21 +797,18 @@ public partial class MainPage : ContentPage
 
         stack.Children.Add(new Label
         {
-            Margin = new Thickness(6),
+            Margin = new Thickness(4),
             HorizontalTextAlignment = TextAlignment.Center,
             LineBreakMode = LineBreakMode.WordWrap,
             TextColor = Colors.White,
-            FontSize = isBonus ? 16 : 10,
+            FontSize = isBonus ? Math.Clamp(bonusHeight * 0.1, 11, 16) : Math.Clamp(cardHeight * 0.18, 8, 12),
             FontAttributes = FontAttributes.Bold,
             Text = label
         });
 
-        return new Border
+        var border = new Border
         {
-            WidthRequest = width,
-            HeightRequest = height,
-            StrokeShape = new RoundRectangle { CornerRadius = isBonus ? 16 : 10 },
-            Margin = isBonus ? 0 : new Thickness(3, 0),
+            StrokeShape = new RoundRectangle { CornerRadius = isBonus ? 14 : 8 },
             StrokeThickness = 2,
             Stroke = Colors.White,
             Background = new LinearGradientBrush
@@ -724,6 +823,21 @@ public partial class MainPage : ContentPage
             },
             Content = stack
         };
+        ApplyCardSize(border, isBonus, widthOverride, heightOverride);
+        return border;
+    }
+
+    private void ApplyCardSize(View view, bool isBonus, double? widthOverride, double? heightOverride)
+    {
+        if (widthOverride is null && heightOverride is null && !isBonus)
+        {
+            view.HorizontalOptions = LayoutOptions.Fill;
+            view.VerticalOptions = LayoutOptions.Fill;
+            return;
+        }
+
+        view.WidthRequest = widthOverride ?? (isBonus ? bonusWidth : cardWidth);
+        view.HeightRequest = heightOverride ?? (isBonus ? bonusHeight : cardHeight);
     }
 
     private static void AddTap(View view, Action action)
