@@ -39,7 +39,7 @@ internal static class RoundPicker
 
         var allMembers = rows.SelectMany(row => row.Members).ToList();
         var bonus = allMembers[Random.Shared.Next(allMembers.Count)];
-        var cardsToRemove = Math.Max(0, allMembers.Count * CardsPerMember - DeckTarget);
+        var cardsToRemove = Math.Max(0, allMembers.Count * CardsPerMember - 1 - DeckTarget);
 
         return new RoundResult(rows, bonus, cardsToRemove);
     }

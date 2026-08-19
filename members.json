@@ -1,6 +1,6 @@
 {
   "generations": {
-    "Gen0": ["Sora", "Robocco", "Azki", "Miko", "Suisei"],
+    "Gen0": ["Sora", "Robocosan", "Azki", "Miko", "Suisei"],
     "Gen1": ["Aki", "Haato", "Fubuki", "Matsuri"],
     "Gen2": ["Ayame", "Choco", "Subaru", "Shion"],
     "Gamers": ["Fubuki", "Mio", "Okayu", "Korone"],
@@ -11,9 +11,9 @@
     "ID Gen1": ["Risu", "Moona", "Iofi"],
     "ID Gen2": ["Ollie", "Anya", "Reine"],
     "ID Gen3": ["Zeta", "Kaela", "Kobo"],
-    "Myth": ["Gura", "Calli", "Ina", "Kiara", "Amelia"],
-    "Promise": ["Fauna", "Irys", "Baelz", "Mumei", "Kronii"],
-    "Advent": ["Shiori", "Biboo", "Nerissa", "Fuwawa", "Mococo"],
+    "Myth": ["Gura", "Calliope", "Inanis", "Kiara", "Amelia"],
+    "Promise": ["Fauna", "IRyS", "Baelz", "Mumei", "Kronii"],
+    "Advent": ["Shiori", "Bijou", "Nerissa", "Fuwawa", "Mococo"],
     "ReGloss": ["Kanade", "Ririka", "Raden", "Hajime", "Ao"]
   },
   "exclusive_pairs": [
